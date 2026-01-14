@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -15,19 +14,21 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
-import { otpSchema } from '@/lib/validation'
+import { useAuth } from "@/hooks/use-auth";
+import { otpSchema } from "@/lib/validation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 const Verify = () => {
+  const { email } = useAuth();
   const form = useForm<z.infer<typeof otpSchema>>({
     resolver: zodResolver(otpSchema),
-    defaultValues: { email: "", otp: '' },
+    defaultValues: { email, otp: "" },
   });
-  let isPending: any
   function onSubmit(values: z.infer<typeof otpSchema>) {
     console.log(values);
+    window.open("/", "_self");
   }
   return (
     <div className="w-full">
@@ -49,6 +50,7 @@ const Verify = () => {
                 <FormControl>
                   <Input
                     placeholder="info@sammi.ac"
+                    disabled
                     className="h-10 bg-secondary"
                     {...field}
                   />
@@ -59,12 +61,17 @@ const Verify = () => {
           />
           <FormField
             control={form.control}
-            name="email"
+            name="otp"
             render={({ field }) => (
               <FormItem>
                 <Label>One-Time Password</Label>
                 <FormControl>
-                  <InputOTP maxLength={6} className='w-full' pattern={REGEXP_ONLY_DIGITS} disabled={isPending} {...field}>
+                  <InputOTP
+                    maxLength={6}
+                    className="w-full"
+                    pattern={REGEXP_ONLY_DIGITS}
+                    {...field}
+                  >
                     <InputOTPGroup className="w-full ">
                       <InputOTPSlot
                         index={0}

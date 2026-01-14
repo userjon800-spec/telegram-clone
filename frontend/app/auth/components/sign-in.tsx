@@ -8,16 +8,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// import { useAuth } from '@/hooks/use-auth'
-// import { toast } from '@/hooks/use-toast'
-// import { axiosClient } from '@/http/axios'
+import { useAuth } from "@/hooks/use-auth";
 import { emailSchema } from "@/lib/validation";
 import { zodResolver } from "@hookform/resolvers/zod";
-// import { useMutation } from '@tanstack/react-query'
-import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 const SignIn = () => {
+  const { setEmail, setStep } = useAuth();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let isPending: any;
   const form = useForm<z.infer<typeof emailSchema>>({
@@ -27,7 +24,8 @@ const SignIn = () => {
     },
   });
   function onSubmit(values: z.infer<typeof emailSchema>) {
-    console.log(values);
+    setStep("verify");
+    setEmail(values.email);
   }
   return (
     <div className="w-full">
@@ -68,5 +66,4 @@ const SignIn = () => {
     </div>
   );
 };
-
 export default SignIn;

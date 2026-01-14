@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/providers/theme.provider";
 const spaceGrotesk = Space_Grotesk({
   weight: ["400", "500", "600", "700", "300"],
   subsets: ["latin"],
@@ -19,10 +20,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressContentEditableWarning>
       <body
-        className={`${spaceGrotesk.className} antialiased sidebar-custom-scrollbar min-h-screen flex items-center justify-center`}
+        className={`${spaceGrotesk.className} antialiased sidebar-custom-scrollbar w-full h-screen`}
         suppressContentEditableWarning
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
