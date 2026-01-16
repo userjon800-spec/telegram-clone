@@ -1,23 +1,26 @@
 "use client";
-import { FC } from "react";
+import { IUser } from "@/types";
+import React, { FC, useState } from "react";
+import Settings from "./settings";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { IUser } from "@/types";
-import Settings from "./settings";
 import { useCurrentContact } from "@/hooks/use-current";
-interface Contacts {
+import { useAuth } from "@/hooks/use-auth";
+import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+interface Props {
   contacts: IUser[];
 }
-const ContactList: FC<Contacts> = ({ contacts }) => {
+const ContactList: FC<Props> = ({ contacts }) => {
   const router = useRouter();
+  const [query, setQuery] = useState("");
   const { currentContact, setCurrentContact } = useCurrentContact();
   const renderContact = (contact: IUser) => {
     const onChat = () => {
       if (currentContact?._id === contact._id) return;
-      setCurrentContact(currentContact);
-      console.log("chatting with", contact.email);
+      setCurrentContact(contact);
       router.push(`/?chat=${contact._id}`);
     };
     return (
