@@ -7,10 +7,21 @@
     "lib": "lib"
   },
   "scripts": {
-    "npm run dev": "nodemon app"
+    "dev": "nodemon app"
   },
   "keywords": [],
-  "author": "",
+  "author": "Xamdamboyev Javohir",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "commonjs",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-group-routes": "^1.1.0",
+    "http": "^0.0.1-security"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
 }
