@@ -7,7 +7,7 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "npm run dev": "nodemon app"
   },
   "keywords": [],
   "author": "",
