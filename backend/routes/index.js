@@ -1,8 +1,8 @@
 const authController = require("../controllers/auth.controller")
+const userController = require("../controllers/user.controller")
 const router = require("express").Router()
 router.post("/auth/login", authController.login)
 router.post("/auth/verify", authController.verify)
-router.get("/user/contacts", (req,res)=>{
-    res.json({contacts: []})
-})
+router.post("/user/create-message", userController.createMessage)
+router.get("/user/messages/:contactId", userController.getMessages)
 module.exports = router
