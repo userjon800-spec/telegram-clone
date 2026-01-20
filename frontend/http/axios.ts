@@ -1,3 +1,6 @@
-import axios from "axios"
-
-export const axiosClient= axios.create({})
+import axios from "axios";
+export const SERVER_URL = process.env.NEXT_PUBLIC_SECRET_URL;
+export const axiosClient = axios.create({
+  baseURL: SERVER_URL,
+  headers: { "Content-Type": "application/json" },
+});

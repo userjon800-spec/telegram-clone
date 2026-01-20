@@ -1,8 +1,31 @@
+import React from "react";
 export interface IUser {
   _id: string;
   email: string;
-  avatar: string
-	firstName: string
-	lastName: string
-	bio: string
+  avatar: string;
+  firstName: string;
+  lastName: string;
+  bio: string;
+  isVerified?: boolean;
+  muted?: boolean;
+  notificationSound?: string;
+  sendingSound?: string;
+  contacts?: IUser[];
+}
+export interface IMessage {
+  _id: string;
+  text: string;
+  image: string;
+  reaction: string;
+  sender: IUser;
+  receiver: IUser;
+  createdAt: string;
+  updatedAt: string;
+  status: string;
+}
+export interface ChildProps {
+  children: React.ReactNode;
+}
+export interface IError {
+  response: { data: { message: string } };
 }

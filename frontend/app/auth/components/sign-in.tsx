@@ -9,14 +9,36 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
+import { axiosClient } from "@/http/axios";
 import { emailSchema } from "@/lib/validation";
+import { IError } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 const SignIn = () => {
   const { setEmail, setStep } = useAuth();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let isPending: any;
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (email: string) => {
+      const { data } = await axiosClient.post<{ email: string }>(
+        "/api/auth/login",
+        { email },
+      );
+      return data;
+    },
+    onSuccess: (res) => {
+      setStep("verify");
+      setEmail(res.email);
+      toast.success("Email sent");
+    },
+    onError: (error: IError) => {
+      if (error?.response?.data?.message) {
+        return toast.error(error.response.data.message);
+      }
+      return toast.error("Something went wrong");
+    },
+  });
   const form = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: {
@@ -24,8 +46,7 @@ const SignIn = () => {
     },
   });
   function onSubmit(values: z.infer<typeof emailSchema>) {
-    setStep("verify");
-    setEmail(values.email);
+    mutate(values.email);
   }
   return (
     <div className="w-full">

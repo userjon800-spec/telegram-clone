@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/providers/theme.provider";
+import QueryProvider from "@/components/providers/query.provider";
+import SessionProvider from "@/components/providers/session.provider";
 const spaceGrotesk = Space_Grotesk({
   weight: ["400", "500", "600", "700", "300"],
   subsets: ["latin"],
@@ -18,20 +21,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressContentEditableWarning>
-      <body
-        className={`${spaceGrotesk.className} antialiased sidebar-custom-scrollbar w-full h-screen`}
-        suppressContentEditableWarning
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
+    <SessionProvider>
+      <QueryProvider>
+        <html lang="en" suppressContentEditableWarning>
+          <body
+            className={`${spaceGrotesk.className} antialiased sidebar-custom-scrollbar w-full h-screen`}
+            suppressContentEditableWarning
+          >
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <main>{children}</main>
+              <Toaster position="top-center" />
+            </ThemeProvider>
+          </body>
+        </html>
+      </QueryProvider>
+    </SessionProvider>
   );
 }

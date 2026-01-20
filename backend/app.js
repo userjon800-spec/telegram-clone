@@ -3,10 +3,17 @@ const express = require("express");
 const http = require("http");
 const { default: mongoose } = require("mongoose");
 const errorMiddleware = require("./middlewares/error.middleware.js");
+const cors = require("cors");
 const app = express();
 app.use(express.json()); // bu client kelgan json ma'lumotni obyektga o'zgartirib beradi har bir loyihda bo'lishi shart !
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  }),
+);
 app.use("/api", require("./routes/index.js"));
-app.use(errorMiddleware)
+app.use(errorMiddleware);
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
 const bootstarp = async () => {
@@ -33,4 +40,4 @@ server.on("error", (err) => {
       throw err;
   }
 });
-bootstarp()
+bootstarp();

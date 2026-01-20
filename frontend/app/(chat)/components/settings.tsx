@@ -24,7 +24,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "@/hooks/use-toast";
 import { axiosClient } from "@/http/axios";
 import { generateToken } from "@/lib/generate-token";
 import { UploadButton } from "@/lib/uploadthing";
@@ -49,6 +48,8 @@ interface IPayload {
 const Settings = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
+  const { data: session } = useSession();
+  console.log(session);
   return (
     <>
       <Popover>
@@ -59,7 +60,8 @@ const Settings = () => {
         </PopoverTrigger>
         <PopoverContent className="p-0 w-80 ">
           <h2 className="pt-2 pl-2 text-muted-foreground">
-            Settings: <span className="text-white">user@gmail.com</span>
+            Settings:{" "}
+            <span className="text-white">{session?.currentUser?.email}</span>
           </h2>
           <Separator className="my-2" />
           <div className="flex flex-col">
@@ -103,7 +105,10 @@ const Settings = () => {
                 }
               />
             </div>
-            <div className="flex justify-between items-center bg-destructive p-2 cursor-pointer">
+            <div
+              className="flex justify-between items-center bg-destructive p-2 cursor-pointer"
+              onClick={() => signOut()}
+            >
               <div className="flex items-center gap-1">
                 <LogIn size={16} />
                 <span className="text-sm">Logout</span>
