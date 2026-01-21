@@ -49,7 +49,6 @@ const Settings = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const { data: session } = useSession();
-  console.log(session);
   return (
     <>
       <Popover>
@@ -61,7 +60,7 @@ const Settings = () => {
         <PopoverContent className="p-0 w-80 ">
           <h2 className="pt-2 pl-2 text-muted-foreground">
             Settings:{" "}
-            <span className="text-white">{session?.currentUser?.email}</span>
+            <span className="text-white">{session?.user?.email}</span>
           </h2>
           <Separator className="my-2" />
           <div className="flex flex-col">

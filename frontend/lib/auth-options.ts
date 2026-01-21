@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { connectToDatabase } from "./mongoose";import User from "@/models/user.model";
+import { connectToDatabase } from "./mongoose";
+import User from "@/models/user.model";
 export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
@@ -9,26 +10,30 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
       },
       async authorize(credentials) {
+        if (!credentials?.email) return null;
         await connectToDatabase();
-        const user = await User.findOne({ email: credentials?.email });
-        return user;
+        let user = await User.findOne({ email: credentials?.email });
+        if (!user) return null;
+        return {
+          id: user._id.toString(),
+          email: user.email,
+        };
       },
     }),
   ],
   callbacks: {
-    async session({ session }) {
-      await connectToDatabase();
-      const isExitsingUser = await User.findOne({ email: session.user?.name });
-      if (!isExitsingUser) {
-        const user = await User.create({
-          email: session.user?.email,
-          isVerified: true,
-          avatar: session.user?.image,
-        });
-        session.currentUser = user;
-        return session;
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
       }
-      session.currentUser = isExitsingUser;
+      return token;
+    },
+    async session({ session, token }) {
+      session.user = {
+        id: token.id as string,
+        email: token.email as string,
+      };
       return session;
     },
   },

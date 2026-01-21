@@ -12,7 +12,7 @@ class AuthController {
       }
       const newUser = await userModel.create({ email });
       await mailService.sendOtp(newUser.email);
-      res.status(200).json({ email: existUser.email });
+      res.status(200).json({ email: newUser.email });
     } catch (error) {
       next(error);
     }
