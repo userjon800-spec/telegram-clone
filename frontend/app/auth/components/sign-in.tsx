@@ -31,13 +31,7 @@ const SignIn = () => {
       setStep("verify");
       setEmail(res.email);
       toast.success("Email sent");
-    },
-    onError: (error: IError) => {
-      if (error?.response?.data?.message) {
-        return toast.error(error.response.data.message);
-      }
-      return toast.error("Something went wrong");
-    },
+    }
   });
   const form = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),

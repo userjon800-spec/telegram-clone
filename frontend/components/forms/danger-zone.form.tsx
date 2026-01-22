@@ -26,13 +26,25 @@ import { useMutation } from "@tanstack/react-query";
 import { axiosClient } from "@/http/axios";
 import { confirmTextSchema } from "@/lib/validation";
 const DangerZoneForm = () => {
-  let isPending: any;
+  const { data: session } = useSession();
   const form = useForm<z.infer<typeof confirmTextSchema>>({
     resolver: zodResolver(confirmTextSchema),
     defaultValues: { confirmText: "" },
   });
+  const { mutate, isPending } = useMutation({
+    mutationFn: async () => {
+      const token = await generateToken(session?.user?._id);
+      const { data } = await axiosClient.delete("/api/user/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      signOut();
+    },
+  });
   function onSubmit() {
-    // mutate()
+    mutate();
   }
   return (
     <>

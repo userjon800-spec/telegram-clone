@@ -26,7 +26,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { axiosClient } from "@/http/axios";
 import { generateToken } from "@/lib/generate-token";
-import { UploadButton } from "@/lib/uploadthing";
 import { useMutation } from "@tanstack/react-query";
 import {
   LogIn,
@@ -41,6 +40,7 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useState } from "react";
+import { toast } from "sonner";
 interface IPayload {
   muted?: boolean;
   avatar?: string;
@@ -48,19 +48,31 @@ interface IPayload {
 const Settings = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
-  const { data: session } = useSession();
+  const { data: session,update } = useSession();
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (payload: IPayload) => {
+      const token = await generateToken(session?.user._id);
+      const { data } = await axiosClient.put("/api/user/profile", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Profile updated successfully")
+      update()
+    },
+  });
   return (
     <>
       <Popover>
         <PopoverTrigger asChild>
-          <Button size={"icon"} variant={"secondary"}>
+          <Button size={"icon"} variant={"secondary"} className="max-md:w-full">
             <Menu />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="p-0 w-80 ">
-          <h2 className="pt-2 pl-2 text-muted-foreground">
-            Settings:{" "}
-            <span className="text-white">{session?.user?.email}</span>
+        <PopoverContent className="p-0 w-80">
+          <h2 className="pt-2 pl-2 text-muted-foreground text-sm">
+            Settings: <span className="text-white">{session?.user?.email}</span>
           </h2>
           <Separator className="my-2" />
           <div className="flex flex-col">
@@ -73,7 +85,10 @@ const Settings = () => {
                 <span className="text-sm">Profile</span>
               </div>
             </div>
-            <div className="flex justify-between items-center p-2 hover:bg-secondary cursor-pointer">
+            <div
+              className="flex justify-between items-center p-2 hover:bg-secondary cursor-pointer"
+              onClick={() => window.location.reload()}
+            >
               <div className="flex items-center gap-1">
                 <UserPlus size={16} />
                 <span className="text-sm">Create contact</span>
@@ -84,7 +99,11 @@ const Settings = () => {
                 <VolumeOff size={16} />
                 <span className="text-sm">Mute</span>
               </div>
-              <Switch />
+              <Switch
+                checked={!session?.user?.muted}
+                onCheckedChange={() => mutate({ muted: !session?.user?.muted })}
+                disabled={isPending}
+              />
             </div>
             <div className="flex justify-between items-center p-2 hover:bg-secondary">
               <div className="flex items-center gap-1">
@@ -117,7 +136,7 @@ const Settings = () => {
         </PopoverContent>
       </Popover>
       <Sheet open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <SheetContent side={"left"} className="w-80 p-2 overflow-auto">
+        <SheetContent side={"left"} className="w-80 p-2 max-md:w-full">
           <SheetHeader>
             <SheetTitle className="text-2xl">My profile</SheetTitle>
             <SheetDescription>
@@ -126,15 +145,30 @@ const Settings = () => {
             </SheetDescription>
           </SheetHeader>
           <Separator className="my-2" />
-          <div className="mx-auto w-1/2 h-36 relative">
+          <div className="mx-auto w-1/2 max-md:w-1/4 h-36 relative">
             <Avatar className="w-full h-36">
+              <AvatarImage
+                src={session?.user?.avatar}
+                alt={session?.user?.email}
+                className="object-cover"
+              />
               <AvatarFallback className="text-6xl uppercase font-spaceGrotesk">
-                JX
+                {session?.user?.email.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <Button size={"icon"} className="absolute right-0 bottom-0">
-              <Upload size={16} />
-            </Button>
+            {/* <UploadButton
+              endpoint="imageUploader"
+              onClientUploadComplete={(res) => {
+                mutate({ avatar: res[0].url });
+              }}
+              config={{ appendOnPaste: true, mode: "auto" }}
+              className="absolute right-0 bottom-0"
+              appearance={{
+                allowedContent: { display: "none" },
+                button: { width: 40, height: 40, borderRadius: "100%" },
+              }}
+              content={{ button: <Upload size={16} /> }}
+            /> */}
           </div>
           <Accordion type="single" collapsible className="mt-4">
             <AccordionItem value="item-1">

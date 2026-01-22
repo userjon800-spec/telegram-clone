@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { axiosClient } from "@/http/axios";
 import { otpSchema } from "@/lib/validation";
-import { IError, IUser } from "@/types";
+import { IUser } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
@@ -38,13 +38,7 @@ const Verify = () => {
     onSuccess: ({ user }) => {
       signIn("credentials", { email: user.email,callbackUrl: '/' });
       toast.success('Successfully verified')
-    },
-    onError: (error: IError) => {
-      if (error?.response?.data?.message) {
-        return toast.error(error.response.data.message);
-      }
-      return toast.error("Something went wrong");
-    },
+    }
   });
   const form = useForm<z.infer<typeof otpSchema>>({
     resolver: zodResolver(otpSchema),
@@ -52,8 +46,6 @@ const Verify = () => {
   });
   function onSubmit(values: z.infer<typeof otpSchema>) {
     mutate(values.otp);
-    // console.log(values);
-    // window.open("/", "_self");
   }
   return (
     <div className="w-full">

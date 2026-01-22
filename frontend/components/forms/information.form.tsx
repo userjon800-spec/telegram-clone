@@ -16,22 +16,40 @@ import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { axiosClient } from "@/http/axios";
-import { toast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
 import { generateToken } from "@/lib/generate-token";
+import { toast } from "sonner";
 const InformationForm = () => {
+  const { data: session, update } = useSession();
+  console.log(session);
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      bio: "",
+      firstName: session?.user.firstName,
+      lastName: session?.user.lastName,
+      bio: session?.user?.bio,
     },
   });
+  const { mutate, isPending } = useMutation({
+    mutationFn: async (payload: z.infer<typeof profileSchema>) => {
+      const token = await generateToken(session?.user?._id);
+      const { data } = await axiosClient.put(
+        "/api/user/profile",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Profile updated succesfully")
+      update()
+    }
+  });
   const onSubmit = (data: z.infer<typeof profileSchema>) => {
-    // mutate(data)
+    mutate(data)
   };
-  let isPending: any;
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">

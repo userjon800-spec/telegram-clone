@@ -1,11 +1,13 @@
 require("dotenv").config(); // .env-dagi data-larni o'qish uchun
 const express = require("express");
 const http = require("http");
+const cookieParser = require("cookie-parser")
 const { default: mongoose } = require("mongoose");
 const errorMiddleware = require("./middlewares/error.middleware.js");
 const cors = require("cors");
 const app = express();
 app.use(express.json()); // bu client kelgan json ma'lumotni obyektga o'zgartirib beradi har bir loyihda bo'lishi shart !
+app.use(cookieParser())
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
