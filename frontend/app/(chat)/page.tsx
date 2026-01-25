@@ -1,7 +1,7 @@
 "use client";
 import { Loader2 } from "lucide-react";
 import ContactList from "./components/contact-list";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FC, useEffect, useRef, useState } from "react";
 import AddContact from "./components/add-contact";
 import { useCurrentContact } from "@/hooks/use-current";
 import { useForm } from "react-hook-form";
@@ -17,10 +17,18 @@ import { useLoading } from "@/hooks/use.loading";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import useAudio from "@/hooks/use-audio";
-import { CONST } from "@/lib/constants";
+import { CONST, SOUNDS } from "@/lib/constants";
 import { axiosClient } from "@/http/axios";
 import { io } from "socket.io-client";
-const Page = () => {
+const Page: FC<GetSocketType> = ({
+  deletedMessage,
+  filteredMessages,
+  message,
+  newMessage,
+  receiver,
+  sender,
+  updatedMessage,
+}) => {
   const { data: session } = useSession();
   const { currentContact } = useCurrentContact();
   const socket = useRef<ReturnType<typeof io> | null>(null);
@@ -34,6 +42,13 @@ const Page = () => {
   const getMessages = async () => {
     setLoadMessages(true);
     try {
+      const { data } = await axiosClient.get<{ messages: IMessage[] }>(
+        `/api/user/messages/${currentContact?._id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      setMessages(data.messages);
     } catch (error) {
       toast.error("Cannot fetch messages");
     } finally {
@@ -53,19 +68,6 @@ const Page = () => {
       setLoading(false);
     }
   };
-  useEffect(() => {
-    // @ts-ignore
-    if (session?.user.id) {
-      socket.current?.emit("addOnlineUser", session.user);
-      socket.current?.on(
-        "getOnlineUsers",
-        (data: { socketId: string; user: IUser }[]) => {
-          setOnlineUsers(data.map((d) => d.user));
-        },
-      );
-      getContacts();  
-    }
-  }, [session?.user]);
   const contactForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: {
@@ -80,9 +82,53 @@ const Page = () => {
     },
   });
   useEffect(() => {
+    // @ts-ignore
+    if (session?.user.id) {
+      socket.current?.emit("addOnlineUser", session.user);
+      socket.current?.on(
+        "getOnlineUsers",
+        (data: { socketId: string; user: IUser }[]) => {
+          setOnlineUsers(data.map((d) => d.user));
+        },
+      );
+      getContacts();
+    }
+  }, [session?.user]);
+  useEffect(() => {
     router.replace("/");
     socket.current = io("http://localhost:8000");
   }, []);
+  useEffect(() => {
+    if (session?.user) {
+      socket.current?.on("getCreateUser", (user) => {
+        console.log("Created by ", user);
+        setContacts((prev) => {
+          const exist = prev.some((c) => c._id === user._id);
+          return exist ? prev : [...prev, user];
+        });
+      });
+      socket.current?.on(
+        "getMessage",
+        ({ newMessage, sender, receiver }: GetSocketType) => {
+          setMessages((prew) => {
+            const exist = prew.some((m) => m._id === newMessage._id);
+            return exist ? prew : [...prew, newMessage];
+          });
+          toast.success(
+            `New message ${sender.email.split("@")[0]} sent you a message`,
+          );
+          if (!receiver.muted) {
+            playSound(receiver.notificationSound || SOUNDS[0].value);
+          }
+        },
+      );
+    }
+  }, [session?.user, socket]);
+  useEffect(() => {
+    if (currentContact?._id) {
+      getMessages();
+    }
+  }, [currentContact]);
   async function onCreateContact(values: z.infer<typeof emailSchema>) {
     setCreating(true);
     try {
@@ -94,6 +140,10 @@ const Page = () => {
         },
       );
       setContacts((prev) => [...prev, data.contact]);
+      socket.current?.emit("createContact", {
+        currentUser: session?.user,
+        receiver: data.contact,
+      });
       toast.success("Contact added successfully");
       contactForm.reset();
     } catch (error) {
@@ -105,13 +155,56 @@ const Page = () => {
       setCreating(false);
     }
   }
-  const onSendMessage = (values: z.infer<typeof messageSchema>) => {
-    console.log(values);
+  const onSubmitMessage = async (values: z.infer<typeof messageSchema>) => {
+    setCreating(true);
   };
-  const onEditMessage = async (messageId: string, text: string) => {};
-  const onReadMessages = async () => {};
-  const onReaction = async (reaction: string, messageId: string) => {};
-  const onDeleteMessage = async (messageId: string) => {};
+  const onSendMessage = async (values: z.infer<typeof messageSchema>) => {
+    setCreating(true);
+    try {
+      const { data } = await axiosClient.post<GetSocketType>(
+        "/api//user/message",
+        { ...values, receiver: currentContact?._id },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      socket.current?.emit("sendMessage", {
+        newMessage: data.newMessage,
+        receiver: data.receiver,
+        sender: data.sender,
+      });
+      setMessages((prev) => [...prev, data.newMessage]);
+      messageForm.reset();
+    } catch {
+      toast.error("Cannot send message");
+    } finally {
+      setCreating(false);
+    }
+  };
+  const onEditMessage = async (messageId: string, text: string) => {
+    try {
+    } catch (error) {
+      toast.error("Cannot edit message");
+    }
+  };
+  const onReadMessages = async () => {
+    try {
+    } catch (error) {
+      toast.error("Cannot mark messages as read");
+    }
+  };
+  const onReaction = async (reaction: string, messageId: string) => {
+    try {
+    } catch (error) {
+      toast.error("Cannot react to message");
+    }
+  };
+  const onDeleteMessage = async (messageId: string) => {
+    try {
+    } catch (error) {
+      toast.error("Cannot delete message");
+    }
+  };
   const onTyping = (e: ChangeEvent<HTMLInputElement>) => {};
   return (
     <>
@@ -132,14 +225,12 @@ const Page = () => {
         )}
         {currentContact?._id && (
           <div className="w-full relative">
-            <TopChat
-            //  messages={messages}
-            />
+            <TopChat messages={messages} />
             <Chat
               messageForm={messageForm}
               onSendMessage={onSendMessage}
               // onSubmitMessage={onSubmitMessage}
-              // messages={messages}
+              messages={messages}
               // onReadMessages={onReadMessages}
               // onReaction={onReaction}
               // onDeleteMessage={onDeleteMessage}

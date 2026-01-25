@@ -65,8 +65,11 @@ class UserController {
         .findById(newMessage._id)
         .populate("sender", "email")
         .populate("receiver", "email");
-
-      res.status(201).json({ newMessage: currentMessage });
+      const receivers = await userModel.findById(newMessage.receiver);
+      const sender = await userModel.findById(newMessage.sender);
+      res
+        .status(201)
+        .json({ newMessage: currentMessage, sender, receiver: receivers });
     } catch (error) {
       next(error);
     }
@@ -109,9 +112,7 @@ class UserController {
         { $push: { contacts: userId } },
         { new: true },
       );
-      res
-        .status(201)
-        .json({ contact: addedContact });
+      res.status(201).json({ contact: addedContact });
     } catch (error) {
       next(error);
     }
@@ -185,7 +186,10 @@ class UserController {
       if (!isOtpValid) {
         throw BaseError.BadRequest("Invalid OTP");
       }
-      const emailExists = await userModel.findOne({ email, _id: { $ne: req.user._id }, });
+      const emailExists = await userModel.findOne({
+        email,
+        _id: { $ne: req.user._id },
+      });
       if (emailExists) {
         throw BaseError.BadRequest("Email already in use");
       }
