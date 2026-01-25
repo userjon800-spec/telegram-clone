@@ -7,7 +7,6 @@ import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
 import { useMutation } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { generateToken } from "@/lib/generate-token";
 import { axiosClient } from "@/http/axios";
 import { SOUNDS } from "@/lib/constants";
 import useAudio from "@/hooks/use-audio";
@@ -16,6 +15,7 @@ const NotificationForm = () => {
   const [selectedSound, setSelectedSound] = useState("");
   const [isNotification, setIsNotification] = useState(false);
   const { data: session, update } = useSession();
+  const tokenFromLogin = session?.accessToken;
   const [isSounding, setIsSounding] = useState(false);
   const { playSound } = useAudio();
   const onPlaySound = (value: string) => {
@@ -24,9 +24,10 @@ const NotificationForm = () => {
   };
   const { mutate, isPending } = useMutation({
     mutationFn: async (payload: IPayload) => {
-      const token = await generateToken(session?.user._id);
       const { data } = await axiosClient.put("/api/user/profile", payload, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${tokenFromLogin}`,
+        },
       });
       return data;
     },

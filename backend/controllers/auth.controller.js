@@ -1,6 +1,7 @@
 const BaseError = require("../errors/base.error");
 const userModel = require("../models/user.model");
 const mailService = require("../service/mail.service");
+const generateToken = require("../lib/generate-token")
 class AuthController {
   async login(req, res, next) {
     try {
@@ -26,7 +27,8 @@ class AuthController {
           { email },
           { isVerified: true },
         );
-        res.status(200).json({ user });
+        const token = await generateToken(user._id.toString());
+        res.status(200).json({ user, token });
       }
     } catch (error) {
       next(error);

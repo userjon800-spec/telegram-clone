@@ -21,13 +21,13 @@ import {
   InputOTPSlot,
 } from "../ui/input-otp";
 import { useMutation } from "@tanstack/react-query";
-import { generateToken } from "@/lib/generate-token";
 import { signOut, useSession } from "next-auth/react";
 import { axiosClient } from "@/http/axios";
 import { toast } from "sonner";
 const EmailForm = () => {
   const [verify, setVerify] = useState(false);
   const { data: session } = useSession();
+  const tokenFromLogin = session?.accessToken;
   const emailForm = useForm<z.infer<typeof oldEmailSchema>>({
     resolver: zodResolver(oldEmailSchema),
     defaultValues: { email: "", oldEmail: session?.user.email },
@@ -38,13 +38,14 @@ const EmailForm = () => {
   });
   const otpMutation = useMutation({
     mutationFn: async (email: string) => {
-      const token = await generateToken(session?.user._id);
       const { data } = await axiosClient.post<{ email: string }>(
         "/api/user/send-otp",
         { email },
         {
-          headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${tokenFromLogin}`,
         },
+      },
       );
       return data;
     },
@@ -59,13 +60,14 @@ const EmailForm = () => {
   }
   const verifyMutation = useMutation({
     mutationFn: async (otp: string) => {
-      const token = await generateToken(session?.user._id);
       const { data } = await axiosClient.put<{ email: string }>(
         "/api/user/email",
         { email: otpForm.getValues("email"), otp },
         {
-          headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${tokenFromLogin}`,
         },
+      }
       );
       return data;
     },
@@ -76,6 +78,7 @@ const EmailForm = () => {
   });
   function onVerifySubmit(values: z.infer<typeof otpSchema>) {
     verifyMutation.mutate(values.otp);
+    otpMutation.mutate(values.email);
   }
   return !verify ? (
     <Form {...emailForm}>
@@ -104,7 +107,7 @@ const EmailForm = () => {
               <Label>Enter a new email</Label>
               <FormControl>
                 <Input
-                  placeholder="info@sammi.ac"
+                  placeholder="user@gmail.com"
                   className="h-10 bg-secondary"
                   disabled={otpMutation.isPending}
                   {...field}

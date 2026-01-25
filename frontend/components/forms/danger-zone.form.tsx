@@ -20,22 +20,23 @@ import {
   FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
-import { generateToken } from "@/lib/generate-token";
 import { signOut, useSession } from "next-auth/react";
 import { useMutation } from "@tanstack/react-query";
 import { axiosClient } from "@/http/axios";
 import { confirmTextSchema } from "@/lib/validation";
 const DangerZoneForm = () => {
   const { data: session } = useSession();
+  const token = session?.accessToken;
   const form = useForm<z.infer<typeof confirmTextSchema>>({
     resolver: zodResolver(confirmTextSchema),
     defaultValues: { confirmText: "" },
   });
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
-      const token = await generateToken(session?.user?._id);
       const { data } = await axiosClient.delete("/api/user/user", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       return data;
     },

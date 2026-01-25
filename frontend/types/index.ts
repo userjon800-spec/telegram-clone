@@ -11,6 +11,7 @@ export interface IUser {
   notificationSound?: string;
   sendingSound?: string;
   contacts?: IUser[];
+  lastMessage: IMessage | null
 }
 export interface IMessage {
   _id: string;

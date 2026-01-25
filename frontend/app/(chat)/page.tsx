@@ -11,12 +11,53 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import TopChat from "./components/top-chat";
 import Chat from "./components/chat";
 import { useSession } from "next-auth/react";
-import { IUser } from "@/types";
-import { useAuth } from "@/hooks/use-auth";
+import { IError, IMessage, IUser } from "@/types";
 import { useRouter } from "next/navigation";
+import { useLoading } from "@/hooks/use.loading";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import useAudio from "@/hooks/use-audio";
+import { CONST } from "@/lib/constants";
+import { axiosClient } from "@/http/axios";
 const Page = () => {
+  const { data: session } = useSession();
   const { currentContact } = useCurrentContact();
+  const [contacts, setContacts] = useState<IUser[]>([]);
+  const [messages, setMessages] = useState<IMessage[]>([]);
+  const { setCreating, setLoading, isLoading, setLoadMessages } = useLoading();
+  const token = session?.accessToken;
   const router = useRouter();
+  const { playSound } = useAudio();
+  const getMessages = async () => {
+    setLoadMessages(true);
+    try {
+    } catch (error) {
+      toast.error("Cannot fetch messages");
+    } finally {
+      setLoadMessages(false);
+    }
+  };
+  const getContacts = async () => {
+    setLoading(true);
+    try {
+      const { data } = await axiosClient.get("/api/user/contacts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setContacts(data.contacts);
+    } catch (error) {
+      toast.error("Cannot fetch contacts");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    router.replace("/");
+  }, []);
+  useEffect(() => {
+    if (session?.user?._id) {
+      getContacts();
+    }
+  }, [session?.user]);
   const contactForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: {
@@ -33,19 +74,44 @@ const Page = () => {
   useEffect(() => {
     router.replace("/");
   }, []);
-  function onCreateContact(values: z.infer<typeof emailSchema>) {
-    console.log(values);
+  async function onCreateContact(values: z.infer<typeof emailSchema>) {
+    setCreating(true);
+    try {
+      const { data } = await axiosClient.post<{ contact: IUser }>(
+        "/api/user/contact",
+        values,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      setContacts((prev) => [...prev, data.contact]);
+      toast.success("Contact added successfully");
+      contactForm.reset();
+    } catch (error) {
+      if ((error as IError).response?.data?.message) {
+        return toast((error as IError).response.data.message);
+      }
+      return toast.error("Something went wrong");
+    } finally {
+      setCreating(false);
+    }
   }
   const onSendMessage = (values: z.infer<typeof messageSchema>) => {
-    // API call to send message
     console.log(values);
   };
+  const onEditMessage = async (messageId: string, text: string) => {};
+  const onReadMessages = async () => {};
+  const onReaction = async (reaction: string, messageId: string) => {};
+  const onDeleteMessage = async (messageId: string) => {};
+  const onTyping = (e: ChangeEvent<HTMLInputElement>) => {};
   return (
     <>
       <div className="w-80 h-screen border-r fixed inset-0 z-50">
-        {/* <div className='w-full h-[95vh] flex justify-center items-center'>
-					<Loader2 size={50} className='animate-spin' />
-				</div> */}
+        {isLoading && (
+          <div className="w-full h-[95vh] flex justify-center items-center">
+            <Loader2 size={50} className="animate-spin" />
+          </div>
+        )}
         <ContactList contacts={contacts} />
       </div>
       <div className="max-md:pl-16 pl-80 w-full">
@@ -76,30 +142,13 @@ const Page = () => {
     </>
   );
 };
-const contacts = [
-  {
-    email: "john@gmail.com",
-    _id: "1",
-    avatar: "https://github.com/shadcn.png",
-    firstName: "John",
-    lastName: "Doe",
-    bio: "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Quis repellat blanditiis hic reiciendis quibusdam voluptatem necessitatibus, minus sint maxime iste impedit cupiditate ab provident doloremque sed dicta, molestias nemo cum.",
-  },
-  { email: "amile@gmail.com", _id: "2",avatar: "https://github.com/shadcn.png",
-    firstName: "John",
-    lastName: "Doe",
-    bio: "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Quis repellat blanditiis hic reiciendis quibusdam voluptatem necessitatibus, minus sint maxime iste impedit cupiditate ab provident doloremque sed dicta, molestias nemo cum.", },
-  { email: "faris@gmail.com", _id: "3",avatar: "https://github.com/shadcn.png",
-    firstName: "John",
-    lastName: "Doe",
-    bio: "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Quis repellat blanditiis hic reiciendis quibusdam voluptatem necessitatibus, minus sint maxime iste impedit cupiditate ab provident doloremque sed dicta, molestias nemo cum.", },
-  { email: "abdo@gmail.com", _id: "4",avatar: "https://github.com/shadcn.png",
-    firstName: "John",
-    lastName: "Doe",
-    bio: "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Quis repellat blanditiis hic reiciendis quibusdam voluptatem necessitatibus, minus sint maxime iste impedit cupiditate ab provident doloremque sed dicta, molestias nemo cum.", },
-  { email: "billi@gmail.com", _id: "5",avatar: "https://github.com/shadcn.png",
-    firstName: "John",
-    lastName: "Doe",
-    bio: "Lorem ipsum dolor, sit amet consectetur adipisicing elit. Quis repellat blanditiis hic reiciendis quibusdam voluptatem necessitatibus, minus sint maxime iste impedit cupiditate ab provident doloremque sed dicta, molestias nemo cum.", },
-];
 export default Page;
+interface GetSocketType {
+  receiver: IUser;
+  sender: IUser;
+  newMessage: IMessage;
+  updatedMessage: IMessage;
+  deletedMessage: IMessage;
+  filteredMessages: IMessage[];
+  message: string;
+}

@@ -11,15 +11,17 @@ module.exports = async function (req, res, next) {
     if (!token) {
       return next(BaseError.Unauthorized());
     }
-    const { userId } = jwt.verify(token, process.env.JWT_SECRET);
-    if (!userId) {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded.id) {
       return next(BaseError.Unauthorized());
     }
-    const user = await userModel.findById(userId);
+    const user = await userModel.findById(decoded.id);
     if (!user) {
       return next(BaseError.Unauthorized());
     }
     req.user = user;
     next();
-  } catch (error) {}
+  } catch (error) {
+    return next(BaseError.Unauthorized());
+  }
 };

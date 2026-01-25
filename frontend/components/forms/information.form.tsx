@@ -17,11 +17,10 @@ import { Button } from "../ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { axiosClient } from "@/http/axios";
 import { useSession } from "next-auth/react";
-import { generateToken } from "@/lib/generate-token";
 import { toast } from "sonner";
 const InformationForm = () => {
   const { data: session, update } = useSession();
-  console.log(session);
+  const tokenFromLogin = session?.accessToken;
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -32,23 +31,20 @@ const InformationForm = () => {
   });
   const { mutate, isPending } = useMutation({
     mutationFn: async (payload: z.infer<typeof profileSchema>) => {
-      const token = await generateToken(session?.user?._id);
-      const { data } = await axiosClient.put(
-        "/api/user/profile",
-        payload,
-        {
-          headers: { Authorization: `Bearer ${token}` },
+      const { data } = await axiosClient.put("/api/user/profile", payload, {
+        headers: {
+          Authorization: `Bearer ${tokenFromLogin}`,
         },
-      );
+      });
       return data;
     },
     onSuccess: () => {
-      toast.success("Profile updated succesfully")
-      update()
-    }
+      toast.success("Profile updated succesfully");
+      update();
+    },
   });
   const onSubmit = (data: z.infer<typeof profileSchema>) => {
-    mutate(data)
+    mutate(data);
   };
   return (
     <Form {...form}>

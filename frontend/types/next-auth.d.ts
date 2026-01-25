@@ -15,5 +15,19 @@ declare module "next-auth" {
       sendingSound?: string;
       contacts: IUser[];
     };
+    accessToken?: string;
+  }
+  interface User {
+    id: string;
+    email: string;
+  }
+}
+declare module "next-auth/jwt" {
+  interface JWT {
+    user: {
+      id: string;
+      email: string;
+    };
+    accessToken: string;
   }
 }

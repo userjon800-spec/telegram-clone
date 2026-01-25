@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { axiosClient } from "@/http/axios";
-import { generateToken } from "@/lib/generate-token";
+import { UploadButton } from "@/lib/uploadthing";
 import { useMutation } from "@tanstack/react-query";
 import {
   LogIn,
@@ -48,18 +48,18 @@ interface IPayload {
 const Settings = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
-  const { data: session,update } = useSession();
+  const { data: session, update } = useSession();
+  const token = session?.accessToken;
   const { mutate, isPending } = useMutation({
     mutationFn: async (payload: IPayload) => {
-      const token = await generateToken(session?.user._id);
       const { data } = await axiosClient.put("/api/user/profile", payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return data;
     },
     onSuccess: () => {
-      toast.success("Profile updated successfully")
-      update()
+      toast.success("Profile updated successfully");
+      update();
     },
   });
   return (
@@ -156,10 +156,10 @@ const Settings = () => {
                 {session?.user?.email.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            {/* <UploadButton
+            <UploadButton
               endpoint="imageUploader"
               onClientUploadComplete={(res) => {
-                mutate({ avatar: res[0].url });
+                mutate({ avatar: res[0].url ?? res[0].ufsUrl });
               }}
               config={{ appendOnPaste: true, mode: "auto" }}
               className="absolute right-0 bottom-0"
@@ -168,7 +168,7 @@ const Settings = () => {
                 button: { width: 40, height: 40, borderRadius: "100%" },
               }}
               content={{ button: <Upload size={16} /> }}
-            /> */}
+            />
           </div>
           <Accordion type="single" collapsible className="mt-4">
             <AccordionItem value="item-1">

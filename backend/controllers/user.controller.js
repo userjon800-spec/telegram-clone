@@ -7,50 +7,44 @@ class UserController {
   // GET
   async getContacts(req, res, next) {
     try {
-      const userId = "696c90a60e8e764fb8339de7";
-      const contacts = await userModel.findById(userId).populate("contacts");
-      const allContacts = contacts.contacts.map((contact) =>
-        contact.toObject(),
-      );
+      const userId = req.user._id;
+      const user = await userModel.findById(userId).populate("contacts");
+      if (!user) throw BaseError.BadRequest("User not found");
+      const allContacts = user.contacts.map((contact) => contact.toObject());
       for (const contact of allContacts) {
-        const lastMessages = await messageModel
+        const lastMessage = await messageModel
           .findOne({
             $or: [
               { sender: userId, receiver: contact._id },
               { sender: contact._id, receiver: userId },
             ],
           })
-          .populate({ path: "sender" })
-          .populate({ path: "receiver" })
+          .populate("sender", "email")
+          .populate("receiver", "email")
           .sort({ createdAt: -1 });
-        contact.lastMessages = lastMessages;
+        contact.lastMessages = lastMessage || null;
       }
-      return res.status(200).json({ contacts: allContacts });
+      res.status(200).json({ contacts: allContacts });
     } catch (error) {
       next(error);
     }
   }
   async getMessages(req, res, next) {
     try {
-      const user = "696c96bf4ce381f9c4a0486e";
+      const userId = req.user._id;
       const { contactId } = req.params;
       const messages = await messageModel
         .find({
           $or: [
-            { sender: user, receiver: contactId },
-            { sender: contactId, receiver: user },
+            { sender: userId, receiver: contactId },
+            { sender: contactId, receiver: userId },
           ],
         })
-        .populate({
-          path: "sender",
-          select: "email",
-        })
-        .populate({
-          path: "receiver",
-          select: "email",
-        });
+        .populate("sender", "email")
+        .populate("receiver", "email");
+
       await messageModel.updateMany(
-        { sender: contactId, receiver: user, status: "SENT" },
+        { sender: contactId, receiver: userId, status: CONST.SENT },
         { status: CONST.READ },
       );
       res.status(200).json({ messages });
@@ -61,17 +55,17 @@ class UserController {
   // POST
   async createMessage(req, res, next) {
     try {
-      const newMessage = await messageModel.create(req.body);
+      const { receiver, text } = req.body;
+      const newMessage = await messageModel.create({
+        sender: req.user._id,
+        receiver,
+        text,
+      });
       const currentMessage = await messageModel
-        .findById(newMessage.id) // id topadi jo'natuvchi id'sini
-        .populate({
-          path: "sender",
-          select: "email",
-        }) // bu esa populate user bizga to'liq yoyib beradi ya'ni uni to'liq ko'rsatadi
-        .populate({
-          path: "receiver",
-          select: "email",
-        }); // bu yerda yoyilgan object ichidan kerakli key va value larni olyabmiz masalan so'rov yuborganimizda faat email o'zi keladi
+        .findById(newMessage._id)
+        .populate("sender", "email")
+        .populate("receiver", "email");
+
       res.status(201).json({ newMessage: currentMessage });
     } catch (error) {
       next(error);
@@ -80,15 +74,15 @@ class UserController {
   async messageRead(req, res, next) {
     try {
       const { messages } = req.body;
-      const allMessages = [];
-      for (const message of messages) {
-        const updateMessage = await messageModel.findByIdAndUpdate(
-          message._id,
-          { status: CONST.READ },
-          { new: true },
-        );
-        allMessages.push(updateMessage);
-      }
+      const allMessages = await Promise.all(
+        messages.map(async (msg) =>
+          messageModel.findByIdAndUpdate(
+            msg._id,
+            { status: CONST.READ },
+            { new: true },
+          ),
+        ),
+      );
       res.status(200).json({ messages: allMessages });
     } catch (error) {
       next(error);
@@ -97,31 +91,27 @@ class UserController {
   async createContact(req, res, next) {
     try {
       const { email } = req.body;
-      const userId = "696c90a60e8e764fb8339de7";
+      const userId = req.user._id;
       const user = await userModel.findById(userId);
       const contact = await userModel.findOne({ email });
       if (!contact)
         throw BaseError.BadRequest("User with this email does not exist");
-      if (user.email === contact.email)
-        throw BaseError.BadRequest("You can add yourself as a contact");
-      const existingContact = await userModel.findOne({
-        _id: userId,
-        contacts: contact._id,
-      });
-      if (existingContact) throw BaseError.BadRequest("Contact already exists");
+      if (contact._id.equals(user._id))
+        throw BaseError.BadRequest("You cannot add yourself as a contact");
+      const isAlreadyContact = user.contacts.some((c) => c.equals(contact._id));
+      if (isAlreadyContact)
+        throw BaseError.BadRequest("Contact already exists");
       await userModel.findByIdAndUpdate(userId, {
         $push: { contacts: contact._id },
       });
       const addedContact = await userModel.findByIdAndUpdate(
         contact._id,
-        {
-          $push: { contacts: userId },
-        },
-        { new: true }, // agar bu parametrni qo'shmasak qo'shilgan contact bizga ko'rinmaydi
+        { $push: { contacts: userId } },
+        { new: true },
       );
-      return res
+      res
         .status(201)
-        .json({ message: "Contact added succesfully", contact: addedContact });
+        .json({ contact: addedContact });
     } catch (error) {
       next(error);
     }
@@ -129,12 +119,12 @@ class UserController {
   async createReaction(req, res, next) {
     try {
       const { messageId, reaction } = req.body;
-      const updateMessage = await messageModel.findByIdAndUpdate(
+      const updatedMessage = await messageModel.findByIdAndUpdate(
         messageId,
         { reaction },
         { new: true },
       );
-      res.status(200).json({ updateMessage });
+      res.status(200).json({ updateMessage: updatedMessage });
     } catch (error) {
       next(error);
     }
@@ -143,20 +133,33 @@ class UserController {
     try {
       const { email } = req.body;
       const existingUser = await userModel.findOne({ email });
-      if (existingUser)
-        throw BaseError.BadRequest("User with this email doest not exist");
+      if (existingUser) {
+        throw BaseError.BadRequest("Email already in use");
+      }
       await mailService.sendOtp(email);
       res.status(200).json({ email });
     } catch (error) {
+      if (error.code === 11000) {
+        return res
+          .status(400)
+          .json({ message: "User with this email already exists" });
+      }
       next(error);
     }
   }
   // [PUT]
   async updateProfile(req, res, next) {
     try {
-      const user = req.user;
-      await userModel.findByIdAndUpdate(user._id, req.body);
-      res.status(200).json({ message: "Profile updated succesfully" });
+      const updatedUser = await userModel.findByIdAndUpdate(
+        req.user._id,
+        req.body,
+        {
+          new: true,
+        },
+      );
+      res
+        .status(200)
+        .json({ message: "Profile updated successfully", user: updatedUser });
     } catch (error) {
       next(error);
     }
@@ -165,12 +168,12 @@ class UserController {
     try {
       const { messageId } = req.params;
       const { text } = req.body;
-      const updateMessage = await messageModel.findByIdAndUpdate(
+      const updatedMessage = await messageModel.findByIdAndUpdate(
         messageId,
         { text },
         { new: true },
       );
-      res.status(200).json({ updateMessage });
+      res.status(200).json({ updateMessage: updatedMessage });
     } catch (error) {
       next(error);
     }
@@ -178,26 +181,32 @@ class UserController {
   async updateEmail(req, res, next) {
     try {
       const { email, otp } = req.body;
-      const result = await mailService.verifyOtp(email, otp);
-      if (result) {
-        const userId = req.user._id
-        const user = await userModel.findByIdAndUpdate(
-          userId,
-          { email },
-          { new: true },
-        );
-        res.status(200).json({ user });
+      const isOtpValid = await mailService.verifyOtp(email, otp);
+      if (!isOtpValid) {
+        throw BaseError.BadRequest("Invalid OTP");
       }
+      const emailExists = await userModel.findOne({ email, _id: { $ne: req.user._id }, });
+      if (emailExists) {
+        throw BaseError.BadRequest("Email already in use");
+      }
+      const user = await userModel.findByIdAndUpdate(
+        req.user._id,
+        { email },
+        { new: true },
+      );
+      res.status(200).json({ user });
     } catch (error) {
+      if (error.code === 11000) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
       next(error);
     }
   }
   // [DELETE]
   async deleteUser(req, res, next) {
     try {
-      const userId = req.user._id;
-      await userModel.findByIdAndDelete(userId);
-      res.status(200).json({ message: "User deleted succesfully" });
+      await userModel.findByIdAndDelete(req.user._id);
+      res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
       next(error);
     }
@@ -205,8 +214,12 @@ class UserController {
   async deleteMessage(req, res, next) {
     try {
       const { messageId } = req.params;
-      await messageModel.findByIdAndDelete(messageId);
-      res.status(200).json({ message: "Message deleted succesfully" });
+      const deletedMessage = await messageModel.findOneAndDelete({
+        _id: messageId,
+        sender: req.user._id,
+      });
+      if (!deletedMessage) throw BaseError.Unauthorized();
+      res.status(200).json({ message: "Message deleted successfully" });
     } catch (error) {
       next(error);
     }

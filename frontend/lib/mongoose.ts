@@ -11,6 +11,6 @@ export const connectToDatabase = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, { autoCreate: true });
   } catch (error) {
-    console.log("Error connecting to database");
+    console.error("Error connecting to database");
   }
 };
