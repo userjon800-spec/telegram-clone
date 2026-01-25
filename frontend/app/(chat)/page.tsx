@@ -19,14 +19,17 @@ import { useAuth } from "@/hooks/use-auth";
 import useAudio from "@/hooks/use-audio";
 import { CONST } from "@/lib/constants";
 import { axiosClient } from "@/http/axios";
+import { io } from "socket.io-client";
 const Page = () => {
   const { data: session } = useSession();
   const { currentContact } = useCurrentContact();
+  const socket = useRef<ReturnType<typeof io> | null>(null);
   const [contacts, setContacts] = useState<IUser[]>([]);
   const [messages, setMessages] = useState<IMessage[]>([]);
   const { setCreating, setLoading, isLoading, setLoadMessages } = useLoading();
   const token = session?.accessToken;
   const router = useRouter();
+  const { setOnlineUsers } = useAuth();
   const { playSound } = useAudio();
   const getMessages = async () => {
     setLoadMessages(true);
@@ -51,11 +54,16 @@ const Page = () => {
     }
   };
   useEffect(() => {
-    router.replace("/");
-  }, []);
-  useEffect(() => {
-    if (session?.user?._id) {
-      getContacts();
+    // @ts-ignore
+    if (session?.user.id) {
+      socket.current?.emit("addOnlineUser", session.user);
+      socket.current?.on(
+        "getOnlineUsers",
+        (data: { socketId: string; user: IUser }[]) => {
+          setOnlineUsers(data.map((d) => d.user));
+        },
+      );
+      getContacts();  
     }
   }, [session?.user]);
   const contactForm = useForm<z.infer<typeof emailSchema>>({
@@ -73,6 +81,7 @@ const Page = () => {
   });
   useEffect(() => {
     router.replace("/");
+    socket.current = io("http://localhost:8000");
   }, []);
   async function onCreateContact(values: z.infer<typeof emailSchema>) {
     setCreating(true);

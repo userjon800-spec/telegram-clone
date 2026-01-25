@@ -18,12 +18,13 @@ interface Props {
 const ContactList: FC<Props> = ({ contacts }) => {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  // const { onlineUsers } = useAuth()
+  const { onlineUsers } = useAuth();
   const { data: session } = useSession();
   const { currentContact, setCurrentContact } = useCurrentContact();
   const filteredContacts = contacts.filter((contact) =>
     contact.email.toLowerCase().includes(query.toLowerCase()),
   );
+  console.log('online users', onlineUsers);
   const renderContact = (contact: IUser) => {
     const onChat = () => {
       if (currentContact?._id === contact._id) return;
@@ -50,9 +51,9 @@ const ContactList: FC<Props> = ({ contacts }) => {
                 {contact.email[0]}
               </AvatarFallback>
             </Avatar>
-            {/* {onlineUsers.some((user) => user._id === contact._id) && (
-              <div className="size-3 bg-green-500 absolute rounded-full bottom-0 right-0 !z-40" />
-            )} */}
+            {onlineUsers.some((user) => user._id === contact._id) && (
+              <div className="size-3 bg-green-500 absolute rounded-full bottom-0 right-0 z-40!" />
+            )}
           </div>
           <div className="max-md:hidden">
             <h2 className="capitalize line-clamp-1 text-sm">
