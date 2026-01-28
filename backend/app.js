@@ -22,7 +22,7 @@ const bootstarp = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("Mongo Db Connected");
-    app.listen(PORT, () =>
+    server.listen(PORT, () =>
       console.log(`Server is run http://localhost:${PORT}`),
     );
   } catch (error) {

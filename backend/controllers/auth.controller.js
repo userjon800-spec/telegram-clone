@@ -26,6 +26,7 @@ class AuthController {
         const user = await userModel.findOneAndUpdate(
           { email },
           { isVerified: true },
+          {new: true}
         );
         const token = await generateToken(user._id.toString());
         res.status(200).json({ user, token });

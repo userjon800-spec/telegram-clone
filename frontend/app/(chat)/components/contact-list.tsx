@@ -18,6 +18,7 @@ interface Props {
 const ContactList: FC<Props> = ({ contacts }) => {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  console.log(contacts, "contacts in contact list");
   const { onlineUsers } = useAuth();
   const { data: session } = useSession();
   const { currentContact, setCurrentContact } = useCurrentContact();

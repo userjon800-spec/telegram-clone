@@ -1,3 +1,4 @@
+'use client"'
 import DangerZoneForm from "@/components/forms/danger-zone.form";
 import EmailForm from "@/components/forms/email.form";
 import InformationForm from "@/components/forms/information.form";
@@ -39,6 +40,7 @@ import {
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 interface IPayload {
@@ -49,6 +51,7 @@ const Settings = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const { data: session, update } = useSession();
+  const router = useRouter();
   const token = session?.accessToken;
   const { mutate, isPending } = useMutation({
     mutationFn: async (payload: IPayload) => {
@@ -57,9 +60,15 @@ const Settings = () => {
       });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Profile updated successfully");
-      update();
+      update({
+    ...session,
+    user: {
+      ...session?.user,
+      ...data.user,
+    },
+  });
     },
   });
   return (
@@ -87,7 +96,7 @@ const Settings = () => {
             </div>
             <div
               className="flex justify-between items-center p-2 hover:bg-secondary cursor-pointer"
-              onClick={() => window.location.reload()}
+              onClick={() => router.push("/")}
             >
               <div className="flex items-center gap-1">
                 <UserPlus size={16} />

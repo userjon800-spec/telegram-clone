@@ -20,6 +20,7 @@ interface Props {
 }
 const MessageCard: FC<Props> = ({ message, onDeleteMessage, onReaction }) => {
   const { currentContact, setEditedMessage } = useCurrentContact();
+  console.log(currentContact, "currentContact in message card");
   const reactions = ["👍", "😂", "❤️", "😍", "👎", ""];
   return (
     <ContextMenu>
@@ -62,7 +63,6 @@ const MessageCard: FC<Props> = ({ message, onDeleteMessage, onReaction }) => {
                   ))}
               </div>
             </div>
-
             <span className="absolute -right-2 -bottom-2">
               {message.reaction}
             </span>

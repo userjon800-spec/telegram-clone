@@ -35,12 +35,12 @@ interface Props {
 }
 const Chat: FC<Props> = ({ messageForm, onSendMessage, messages }) => {
   const { resolvedTheme } = useTheme();
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   const { loadMessages } = useLoading();
-  const inputRef = useRef<HTMLInputElement | null>(null)
-	const scrollRef = useRef<HTMLFormElement | null>(null)
-  const { editMessage, setEditedMessage, currentContact } = useCurrentContact()
-  const { data: session } = useSession()
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const scrollRef = useRef<HTMLFormElement | null>(null);
+  const { editMessage, setEditedMessage, currentContact } = useCurrentContact();
+  const { data: session } = useSession();
   const handleEmojiSelect = (emoji: string) => {
     const input = inputRef.current;
     if (!input) return;
@@ -58,10 +58,11 @@ const Chat: FC<Props> = ({ messageForm, onSendMessage, messages }) => {
       {loadMessages && <ChatLoading />}
       {/* {filteredMessages.map((message, index) => (
 				<MessageCard key={index} message={message} onReaction={onReaction} onDeleteMessage={onDeleteMessage} />
-			))} */}  {/* //!! Keyinroq ishlat */}
+			))} */}{" "}
+      {/* //!! Keyinroq ishlat */}
       {messages.map((message, index) => (
-				<MessageCard key={index} message={message} />
-			))}
+        <MessageCard key={index} message={message} />
+      ))}
       {messages.length === 0 && (
         <div className="w-full h-[88vh] flex items-center justify-center">
           <div
@@ -74,6 +75,11 @@ const Chat: FC<Props> = ({ messageForm, onSendMessage, messages }) => {
       )}
       <Form {...messageForm}>
         <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            messageForm.handleSubmit(onSendMessage)();
+          }}  
+          //!! buni keyinroq ishlatma
           // onSubmit={messageForm.handleSubmit(onSubmitMessage)}
           className="w-full flex relative"
           ref={scrollRef}
@@ -109,11 +115,11 @@ const Chat: FC<Props> = ({ messageForm, onSendMessage, messages }) => {
                     placeholder="Type a message"
                     value={field.value}
                     onBlur={() => field.onBlur()}
-                    // onChange={(e) => {
-                    //   field.onChange(e.target.value);
-                    //   onTyping(e);
-                    //   if (e.target.value === "") setEditedMessage(null);
-                    // }}
+                    onChange={(e) => {
+                      field.onChange(e.target.value);
+                      // onTyping(e);
+                      if (e.target.value === "") setEditedMessage(null);
+                    }}
                     ref={inputRef}
                   />
                 </FormControl>

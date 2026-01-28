@@ -40,6 +40,7 @@ io.on("connection", (socket) => {
         .emit("getNewMessage", { newMessage, sender, receiver });
     }
   });
+  socket.on('readMessages', ({ receiver, messages }) =>{})
   socket.on("disconnect", () => {
     console.log("User disconnected", socket.id);
     users = users.filter((u) => u.socketId !== socket.id);

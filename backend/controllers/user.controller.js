@@ -160,7 +160,7 @@ class UserController {
       );
       res
         .status(200)
-        .json({ message: "Profile updated successfully", user: updatedUser });
+        .json({ user: updatedUser });
     } catch (error) {
       next(error);
     }
