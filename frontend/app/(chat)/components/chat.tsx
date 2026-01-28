@@ -29,11 +29,25 @@ import { useLoading } from "@/hooks/use.loading";
 import { UploadDropzone } from "@uploadthing/react";
 import { IMessage } from "@/types";
 interface Props {
+  onSubmitMessage?: (values: z.infer<typeof messageSchema>) => Promise<void>;
+  onReadMessages: () => Promise<void>;
+  onReaction?: (reaction: string, messageId: string) => Promise<void>;
+  onDeleteMessage?: (messageId: string) => Promise<void>;
+  onTyping?: (e: ChangeEvent<HTMLInputElement>) => void;
   messageForm: UseFormReturn<z.infer<typeof messageSchema>>;
-  onSendMessage: (values: z.infer<typeof messageSchema>) => void;
   messages: IMessage[];
+  onSendMessage: (values: z.infer<typeof messageSchema>) => Promise<void>;
 }
-const Chat: FC<Props> = ({ messageForm, onSendMessage, messages }) => {
+const Chat: FC<Props> = ({
+  messageForm,
+  onSendMessage,
+  messages,
+  onDeleteMessage,
+  onReaction,
+  onReadMessages,
+  onSubmitMessage,
+  onTyping,
+}) => {
   const { resolvedTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const { loadMessages } = useLoading();
@@ -41,6 +55,10 @@ const Chat: FC<Props> = ({ messageForm, onSendMessage, messages }) => {
   const scrollRef = useRef<HTMLFormElement | null>(null);
   const { editMessage, setEditedMessage, currentContact } = useCurrentContact();
   const { data: session } = useSession();
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    onReadMessages();
+  }, [messages]);
   const handleEmojiSelect = (emoji: string) => {
     const input = inputRef.current;
     if (!input) return;
@@ -78,8 +96,8 @@ const Chat: FC<Props> = ({ messageForm, onSendMessage, messages }) => {
           onSubmit={(e) => {
             e.preventDefault();
             messageForm.handleSubmit(onSendMessage)();
-          }}  
-          //!! buni keyinroq ishlatma
+          }}
+          //! buni keyinroq ishlatma
           // onSubmit={messageForm.handleSubmit(onSubmitMessage)}
           className="w-full flex relative"
           ref={scrollRef}

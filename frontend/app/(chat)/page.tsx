@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import ContactList from "./components/contact-list";
 import AddContact from "./components/add-contact";
@@ -19,15 +19,16 @@ import { emailSchema, messageSchema } from "@/lib/validation";
 import { axiosClient } from "@/http/axios";
 import { socket } from "@/lib/socket";
 import { IUser, IMessage, IError } from "@/types";
-import { SOUNDS } from "@/lib/constants";
+import { CONST, SOUNDS } from "@/lib/constants";
 const Page: FC = () => {
   const { data: session } = useSession();
-  const router = useRouter();
   const { currentContact } = useCurrentContact();
   const { setLoading, isLoading, setCreating, setLoadMessages } = useLoading();
   const { setOnlineUsers, onlineUsers } = useAuth();
   const { playSound } = useAudio();
   const token = session?.accessToken;
+  const serachParams = useSearchParams();
+  const CONTACT_ID = serachParams.get("chat");
   const [contacts, setContacts] = useState<IUser[]>([]);
   const [messages, setMessages] = useState<IMessage[]>([]);
   const contactForm = useForm<z.infer<typeof emailSchema>>({
@@ -40,15 +41,15 @@ const Page: FC = () => {
   });
   useEffect(() => {
     if (!session?.accessToken) return;
-    socket.auth = {
-      token: session.accessToken,
-    };
-    socket.connect();
+    if (!socket.connected) {
+      socket.auth = { token: session.accessToken };
+      socket.connect();
+    }
     socket.emit("addOnlineUser", session.user);
     return () => {
       socket.disconnect();
     };
-  }, [session?.accessToken]);
+  }, [session?.user._id]);
   useEffect(() => {
     const handleOnlineUsers = (users: any[]) => {
       setOnlineUsers(users.map((u) => u.user));
@@ -70,16 +71,32 @@ const Page: FC = () => {
           ? prev
           : [...prev, newMessage],
       );
-      setContacts((prev) =>
-        prev.map((c) =>
-          c._id === sender._id || c._id === receiver._id
-            ? { ...c, lastMessage: newMessage }
-            : c,
-        ),
-      );
+      setContacts((prev) => {
+        return prev.map((contact) => {
+          if (contact._id === sender._id) {
+            return {
+              ...contact,
+              lastMessage: {
+                ...newMessage,
+                status:
+                  CONTACT_ID === sender._id ? CONST.READ : newMessage.status,
+              },
+            };
+          }
+          return contact;
+        });
+      });
     };
     socket.on("getCreateUser", onCreateUser);
     socket.on("getNewMessage", onNewMessage);
+    socket.on("getReadMessages", (messages: IMessage[]) => {
+      setMessages((prev) =>
+        prev.map((item) => {
+          const message = messages.find((msg) => msg._id === item._id);
+          return message ? { ...item, status: CONST.READ } : item;
+        }),
+      );
+    });
     return () => {
       socket.off("getCreateUser", onCreateUser);
       socket.off("getNewMessage", onNewMessage);
@@ -107,6 +124,16 @@ const Page: FC = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setMessages(data.messages);
+      setContacts((prev) =>
+        prev.map((item) =>
+          item._id === currentContact._id && item.lastMessage
+            ? {
+                ...item,
+                lastMessage: { ...item.lastMessage, status: CONST.READ },
+              }
+            : item,
+        ),
+      );
     } catch {
       toast.error("Cannot fetch messages");
     } finally {
@@ -145,13 +172,57 @@ const Page: FC = () => {
         { ...values, receiver: currentContact?._id },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      socket.emit("sendMessage", data);
+      socket.emit("sendMessage", {
+        newMessage: data.newMessage,
+        receiver: data.receiver,
+        sender: data.sender,
+      });
       setMessages((prev) => [...prev, data.newMessage]);
+      setContacts((prev) =>
+        prev.map((item) =>
+          item._id === currentContact?._id
+            ? {
+                ...item,
+                lastMessage: {
+                  ...data.newMessage,
+                  status: CONST.READ,
+                } as IMessage,
+              }
+            : item,
+        ),
+      );
       messageForm.reset();
     } catch {
       toast.error("Cannot send message");
     } finally {
       setCreating(false);
+    }
+  };
+  const onReadMessages = async () => {
+    const receiverMessages = messages.filter(
+      (message) =>
+        message.receiver._id === session?.user._id &&
+        message.status !== CONST.READ,
+    );
+    if (receiverMessages.length === 0) return;
+    try {
+      const { data } = await axiosClient.post<{ messages: IMessage[] }>(
+        "/api/user/message-read",
+        { messages: receiverMessages },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      socket.emit("readMessages", {
+        receiver: currentContact,
+        messages: data.messages,
+      });
+      setMessages((prev) =>
+        prev.map((item) => {
+          const message = data.messages.find((msg) => msg._id === item._id);
+          return message ? { ...item, status: CONST.READ } : item;
+        }),
+      );
+    } catch {
+      toast.error("Cannot mark messages as read");
     }
   };
   return (
@@ -179,6 +250,7 @@ const Page: FC = () => {
               messages={messages}
               messageForm={messageForm}
               onSendMessage={onSendMessage}
+              onReadMessages={onReadMessages}
             />
           </>
         )}
