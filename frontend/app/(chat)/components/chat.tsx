@@ -29,18 +29,16 @@ import { useLoading } from "@/hooks/use.loading";
 import { UploadDropzone } from "@uploadthing/react";
 import { IMessage } from "@/types";
 interface Props {
-  onSubmitMessage?: (values: z.infer<typeof messageSchema>) => Promise<void>;
+  onSubmitMessage: (values: z.infer<typeof messageSchema>) => Promise<void>;
   onReadMessages: () => Promise<void>;
-  onReaction?: (reaction: string, messageId: string) => Promise<void>;
-  onDeleteMessage?: (messageId: string) => Promise<void>;
+  onReaction: (reaction: string, messageId: string) => Promise<void>;
+  onDeleteMessage: (messageId: string) => Promise<void>;
   onTyping?: (e: ChangeEvent<HTMLInputElement>) => void;
   messageForm: UseFormReturn<z.infer<typeof messageSchema>>;
   messages: IMessage[];
-  onSendMessage: (values: z.infer<typeof messageSchema>) => Promise<void>;
 }
 const Chat: FC<Props> = ({
   messageForm,
-  onSendMessage,
   messages,
   onDeleteMessage,
   onReaction,
@@ -55,10 +53,17 @@ const Chat: FC<Props> = ({
   const scrollRef = useRef<HTMLFormElement | null>(null);
   const { editMessage, setEditedMessage, currentContact } = useCurrentContact();
   const { data: session } = useSession();
+  const filteredMessages = messages.filter((message,index,self)=>{})
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     onReadMessages();
   }, [messages]);
+  useEffect(()=>{
+    if (editMessage) {
+      messageForm.setValue("text", editMessage.text)
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  },[editMessage])
   const handleEmojiSelect = (emoji: string) => {
     const input = inputRef.current;
     if (!input) return;
@@ -74,18 +79,14 @@ const Chat: FC<Props> = ({
   return (
     <div className="flex flex-col justify-end z-40 min-h-[92vh] sidebar-custom-scrollbar overflow-y-scroll">
       {loadMessages && <ChatLoading />}
-      {/* {filteredMessages.map((message, index) => (
+      {filteredMessages.map((message, index) => (
 				<MessageCard key={index} message={message} onReaction={onReaction} onDeleteMessage={onDeleteMessage} />
-			))} */}{" "}
-      {/* //!! Keyinroq ishlat */}
-      {messages.map((message, index) => (
-        <MessageCard key={index} message={message} />
-      ))}
+			))}{" "}
       {messages.length === 0 && (
         <div className="w-full h-[88vh] flex items-center justify-center">
           <div
             className="text-[100px] cursor-pointer"
-            // onClick={() => onSubmitMessage({ text: '✋' })}
+            onClick={() => onSubmitMessage({ text: '✋' })}
           >
             ✋
           </div>
@@ -93,12 +94,7 @@ const Chat: FC<Props> = ({
       )}
       <Form {...messageForm}>
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            messageForm.handleSubmit(onSendMessage)();
-          }}
-          //! buni keyinroq ishlatma
-          // onSubmit={messageForm.handleSubmit(onSubmitMessage)}
+          onSubmit={messageForm.handleSubmit(onSubmitMessage)}
           className="w-full flex relative"
           ref={scrollRef}
         >

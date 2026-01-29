@@ -20,9 +20,11 @@ import { axiosClient } from "@/http/axios";
 import { socket } from "@/lib/socket";
 import { IUser, IMessage, IError } from "@/types";
 import { CONST, SOUNDS } from "@/lib/constants";
+import { on } from "events";
+import { set } from "mongoose";
 const Page: FC = () => {
   const { data: session } = useSession();
-  const { currentContact } = useCurrentContact();
+  const { currentContact, editMessage, setEditedMessage } = useCurrentContact();
   const { setLoading, isLoading, setCreating, setLoadMessages } = useLoading();
   const { setOnlineUsers, onlineUsers } = useAuth();
   const { playSound } = useAudio();
@@ -65,7 +67,7 @@ const Page: FC = () => {
         prev.some((c) => c._id === user._id) ? prev : [...prev, user],
       );
     };
-    const onNewMessage = ({ newMessage, sender, receiver }: any) => {
+    const onNewMessage = ({ newMessage, sender, receiver }: GetSocketType) => {
       setMessages((prev) =>
         prev.some((m) => m._id === newMessage._id)
           ? prev
@@ -87,16 +89,74 @@ const Page: FC = () => {
         });
       });
     };
-    socket.on("getCreateUser", onCreateUser);
-    socket.on("getNewMessage", onNewMessage);
-    socket.on("getReadMessages", (messages: IMessage[]) => {
+    const readMessagesHandler = (messages: IMessage[]) => {
       setMessages((prev) =>
         prev.map((item) => {
           const message = messages.find((msg) => msg._id === item._id);
           return message ? { ...item, status: CONST.READ } : item;
         }),
       );
-    });
+    };
+    const updatedMessage = ({
+      updatedMessage,
+      sender,
+      receiver,
+    }: GetSocketType) => {
+      setMessages((prev) =>
+        prev.map((item) =>
+          item._id === updatedMessage._id
+            ? {
+                ...item,
+                reaction: updatedMessage.reaction,
+                text: updatedMessage.text,
+              }
+            : item,
+        ),
+      );
+      setContacts((prev) =>
+        prev.map((item) =>
+          item._id === sender._id
+            ? {
+                ...item,
+                lastMessage:
+                  item.lastMessage?._id === updatedMessage._id
+                    ? updatedMessage
+                    : item.lastMessage,
+              }
+            : item,
+        ),
+      );
+    };
+    const getDeleteMessage = ({
+      deletedMessage,
+      sender,
+      filteredMessages,
+    }: GetSocketType) => {
+      setMessages((prev) =>
+        prev.filter((item) => item._id !== deletedMessage._id),
+      );
+      const lastMessage = filteredMessages.length
+        ? filteredMessages[filteredMessages.length - 1]
+        : null;
+      setContacts((prev) =>
+        prev.map((item) =>
+          item._id === sender?._id
+            ? {
+                ...item,
+                lastMessage:
+                  item.lastMessage?._id === deletedMessage._id
+                    ? lastMessage
+                    : item.lastMessage,
+              }
+            : item,
+        ),
+      );
+    };
+    socket.on("getCreateUser", onCreateUser);
+    socket.on("getNewMessage", onNewMessage);
+    socket.on("getReadMessages", readMessagesHandler);
+    socket.on("getUpdatedMessage", updatedMessage);
+    socket.on("getDeleteMessage", getDeleteMessage);
     return () => {
       socket.off("getCreateUser", onCreateUser);
       socket.off("getNewMessage", onNewMessage);
@@ -225,6 +285,113 @@ const Page: FC = () => {
       toast.error("Cannot mark messages as read");
     }
   };
+  const onReaction = async (reaction: string, messageId: string) => {
+    try {
+      const { data } = await axiosClient.post<{ updateMessage: IMessage }>(
+        "/api/user/reaction",
+        { reaction, messageId },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setMessages((prev) =>
+        prev.map((Item) =>
+          Item._id === data.updateMessage._id
+            ? { ...Item, reaction: data.updateMessage.reaction }
+            : Item,
+        ),
+      );
+      socket.emit("updateMessage", {
+        updadteMessage: data.updateMessage,
+        receiver: currentContact,
+        sender: session?.user,
+      });
+    } catch {
+      toast.error("Cannot react to message");
+    }
+  };
+  const onDeleteMessage = async (messageId: string) => {
+    try {
+      const { data } = await axiosClient.delete<{ deletedMessage: IMessage }>(
+        `api/user/message/${messageId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const filteredMessages = messages.filter(
+        (msg) => msg._id !== data.deletedMessage._id,
+      );
+      const lastMessage = filteredMessages.length
+        ? filteredMessages[filteredMessages.length - 1]
+        : null;
+      setMessages(filteredMessages);
+      socket.emit("deleteMessage", {
+        deletedMessage: data.deletedMessage,
+        sender: session?.user,
+        receiver: currentContact,
+        filteredMessages,
+      });
+      setContacts((prev) =>
+        prev.map((item) =>
+          item._id === currentContact?._id
+            ? {
+                ...item,
+                lastMessage:
+                  item.lastMessage?._id === messageId
+                    ? lastMessage
+                    : item.lastMessage,
+              }
+            : item,
+        ),
+      );
+    } catch {
+      toast.error("Cannot delete message");
+    }
+  };
+  const onEditMessage = async (messageId: string, text: string) => {
+    try {
+      const { data } = await axiosClient.put<{ updateMessage: IMessage }>(
+        `/api/user/message${messageId}`,
+        { text },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      setMessages((prev) =>
+        prev.map((item) =>
+          item._id === data.updateMessage._id
+            ? { ...item, text: data.updateMessage.text }
+            : item,
+        ),
+      );
+      socket.emit("updateMessage", {
+        updadteMessage: data.updateMessage,
+        receiver: currentContact,
+        sender: session?.user,
+      });
+      messageForm.reset();
+      setContacts((prev) =>
+        prev.map((item) =>
+          item._id === currentContact?._id
+            ? {
+                ...item,
+                lastMessage:
+                  item.lastMessage?._id === messageId
+                    ? data.updateMessage
+                    : item.lastMessage,
+              }
+            : item,
+        ),
+      );
+      setEditedMessage(null);
+    } catch {
+      toast.error("Cannot edit message");
+    }
+  };
+  const onSubmitMessage = async (values: z.infer<typeof messageSchema>) => {
+    setCreating(true);
+    if (editMessage?._id) {
+      onEditMessage(editMessage._id, values.text);
+    } else {
+      onSendMessage(values);
+    }
+  };
   return (
     <>
       <div className="w-80 h-screen border-r fixed inset-0 z-50">
@@ -247,10 +414,13 @@ const Page: FC = () => {
           <>
             <TopChat messages={messages} />
             <Chat
-              messages={messages}
               messageForm={messageForm}
-              onSendMessage={onSendMessage}
+              onSubmitMessage={onSubmitMessage}
+              messages={messages}
               onReadMessages={onReadMessages}
+              onReaction={onReaction}
+              onDeleteMessage={onDeleteMessage}
+              // onTyping={onTyping}
             />
           </>
         )}
@@ -259,3 +429,12 @@ const Page: FC = () => {
   );
 };
 export default Page;
+interface GetSocketType {
+  receiver: IUser;
+  sender: IUser;
+  newMessage: IMessage;
+  updatedMessage: IMessage;
+  deletedMessage: IMessage;
+  filteredMessages: IMessage[];
+  message: string;
+}

@@ -158,9 +158,7 @@ class UserController {
           new: true,
         },
       );
-      res
-        .status(200)
-        .json({ user: updatedUser });
+      res.status(200).json({ user: updatedUser });
     } catch (error) {
       next(error);
     }
@@ -223,7 +221,7 @@ class UserController {
         sender: req.user._id,
       });
       if (!deletedMessage) throw BaseError.Unauthorized();
-      res.status(200).json({ message: "Message deleted successfully" });
+      res.status(200).json({ deletedMessage });
     } catch (error) {
       next(error);
     }

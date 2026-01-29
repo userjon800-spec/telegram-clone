@@ -15,12 +15,11 @@ import { format } from "date-fns";
 import { CONST } from "@/lib/constants";
 interface Props {
   message: IMessage;
-  onReaction?: (reaction: string, messageId: string) => Promise<void>;
-  onDeleteMessage?: (messageId: string) => Promise<void>;
+  onReaction: (reaction: string, messageId: string) => Promise<void>;
+  onDeleteMessage: (messageId: string) => Promise<void>;
 }
 const MessageCard: FC<Props> = ({ message, onDeleteMessage, onReaction }) => {
   const { currentContact, setEditedMessage } = useCurrentContact();
-  console.log(currentContact, "currentContact in message card");
   const reactions = ["👍", "😂", "❤️", "😍", "👎", ""];
   return (
     <ContextMenu>
@@ -78,7 +77,7 @@ const MessageCard: FC<Props> = ({ message, onDeleteMessage, onReaction }) => {
                 "text-xl cursor-pointer p-1 hover:bg-primary/50 transition-all",
                 message.reaction === reaction && "bg-primary/50",
               )}
-              // onClick={() => onReaction(reaction, message._id)}
+              onClick={() => onReaction(reaction, message._id)}
             >
               {reaction}
             </div>
@@ -98,7 +97,7 @@ const MessageCard: FC<Props> = ({ message, onDeleteMessage, onReaction }) => {
             )}
             <ContextMenuItem
               className="cursor-pointer"
-              // onClick={() => onDeleteMessage(message._id)}
+              onClick={() => onDeleteMessage(message._id)}
             >
               <Trash size={14} className="mr-2" />
               <span>Delete</span>
