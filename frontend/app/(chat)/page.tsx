@@ -42,6 +42,14 @@ const Page: FC = () => {
     defaultValues: { text: "", image: "" },
   });
   useEffect(() => {
+    console.debug(
+      "DEBUG session",
+      session?.user?._id,
+      "socket.connected",
+      socket.connected,
+    );
+  }, [session]);
+  useEffect(() => {
     if (!session?.accessToken) return;
     if (!socket.connected) {
       socket.auth = { token: session.accessToken };
@@ -49,7 +57,7 @@ const Page: FC = () => {
     }
     socket.emit("addOnlineUser", session.user);
     return () => {
-      socket.disconnect();
+      socket.off();
     };
   }, [session?.user._id]);
   useEffect(() => {
@@ -97,11 +105,7 @@ const Page: FC = () => {
         }),
       );
     };
-    const updatedMessage = ({
-      updatedMessage,
-      sender,
-      receiver,
-    }: GetSocketType) => {
+    const updatedMessage = ({ updatedMessage, sender }: GetSocketType) => {
       setMessages((prev) =>
         prev.map((item) =>
           item._id === updatedMessage._id
@@ -156,10 +160,13 @@ const Page: FC = () => {
     socket.on("getNewMessage", onNewMessage);
     socket.on("getReadMessages", readMessagesHandler);
     socket.on("getUpdatedMessage", updatedMessage);
-    socket.on("getDeleteMessage", getDeleteMessage);
+    socket.on("getDeletedMessage", getDeleteMessage);
     return () => {
       socket.off("getCreateUser", onCreateUser);
       socket.off("getNewMessage", onNewMessage);
+      socket.off("getReadMessages", readMessagesHandler);
+      socket.off("getUpdatedMessage", updatedMessage);
+      socket.off("getDeletedMessage", getDeleteMessage);
     };
   }, []);
   const getContacts = async () => {
@@ -169,6 +176,7 @@ const Page: FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setContacts(data.contacts);
+      console.debug("DEBUG contacts", data.contacts);
     } catch {
       toast.error("Cannot fetch contacts");
     } finally {
@@ -184,6 +192,11 @@ const Page: FC = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setMessages(data.messages);
+      console.debug(
+        "DEBUG messages for",
+        currentContact._id,
+        data.messages.length,
+      );
       setContacts((prev) =>
         prev.map((item) =>
           item._id === currentContact._id && item.lastMessage
@@ -300,7 +313,7 @@ const Page: FC = () => {
         ),
       );
       socket.emit("updateMessage", {
-        updadteMessage: data.updateMessage,
+        updatedMessage: data.updateMessage,
         receiver: currentContact,
         sender: session?.user,
       });
@@ -311,7 +324,7 @@ const Page: FC = () => {
   const onDeleteMessage = async (messageId: string) => {
     try {
       const { data } = await axiosClient.delete<{ deletedMessage: IMessage }>(
-        `api/user/message/${messageId}`,
+        `/api/user/message/${messageId}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const filteredMessages = messages.filter(
@@ -347,7 +360,7 @@ const Page: FC = () => {
   const onEditMessage = async (messageId: string, text: string) => {
     try {
       const { data } = await axiosClient.put<{ updateMessage: IMessage }>(
-        `/api/user/message${messageId}`,
+        `/api/user/message/${messageId}`,
         { text },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -361,7 +374,7 @@ const Page: FC = () => {
         ),
       );
       socket.emit("updateMessage", {
-        updadteMessage: data.updateMessage,
+        updatedMessage: data.updateMessage,
         receiver: currentContact,
         sender: session?.user,
       });

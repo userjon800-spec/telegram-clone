@@ -22,7 +22,8 @@
     "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.4",
-    "nodemailer": "^7.0.12"
+    "nodemailer": "^7.0.12",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",

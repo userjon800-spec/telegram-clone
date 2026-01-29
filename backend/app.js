@@ -1,13 +1,13 @@
 require("dotenv").config(); // .env-dagi data-larni o'qish uchun
 const express = require("express");
 const http = require("http");
-const cookieParser = require("cookie-parser")
+const cookieParser = require("cookie-parser");
 const { default: mongoose } = require("mongoose");
 const errorMiddleware = require("./middlewares/error.middleware.js");
 const cors = require("cors");
 const app = express();
 app.use(express.json()); // bu client kelgan json ma'lumotni obyektga o'zgartirib beradi har bir loyihda bo'lishi shart !
-app.use(cookieParser())
+app.use(cookieParser());
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
@@ -16,8 +16,17 @@ app.use(
 );
 app.use("/api", require("./routes/index.js"));
 app.use(errorMiddleware);
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 7800;
 const server = http.createServer(app);
+const { Server } = require("socket.io");
+const socketHandler = require("./server");
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL,
+    methods: ["GET", "POST"],
+  },
+});
+socketHandler(io);
 const bootstarp = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);

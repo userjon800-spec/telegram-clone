@@ -52,18 +52,27 @@ const Chat: FC<Props> = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLFormElement | null>(null);
   const { editMessage, setEditedMessage, currentContact } = useCurrentContact();
+  console.debug(
+    "DEBUG Chat currentContact",
+    currentContact,
+    "messages",
+    messages.length,
+  );
   const { data: session } = useSession();
-  const filteredMessages = messages.filter((message,index,self)=>{})
+  const filteredMessages = messages.filter(
+    (message, index, self) =>
+      index === self.findIndex((m) => m._id === message._id),
+  );
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     onReadMessages();
   }, [messages]);
-  useEffect(()=>{
+  useEffect(() => {
     if (editMessage) {
-      messageForm.setValue("text", editMessage.text)
+      messageForm.setValue("text", editMessage.text);
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  },[editMessage])
+  }, [editMessage]);
   const handleEmojiSelect = (emoji: string) => {
     const input = inputRef.current;
     if (!input) return;
@@ -79,14 +88,19 @@ const Chat: FC<Props> = ({
   return (
     <div className="flex flex-col justify-end z-40 min-h-[92vh] sidebar-custom-scrollbar overflow-y-scroll">
       {loadMessages && <ChatLoading />}
-      {filteredMessages.map((message, index) => (
-				<MessageCard key={index} message={message} onReaction={onReaction} onDeleteMessage={onDeleteMessage} />
-			))}{" "}
+      {filteredMessages.map((message) => (
+        <MessageCard
+          key={message._id}
+          message={message}
+          onReaction={onReaction}
+          onDeleteMessage={onDeleteMessage}
+        />
+      ))}{" "}
       {messages.length === 0 && (
         <div className="w-full h-[88vh] flex items-center justify-center">
           <div
             className="text-[100px] cursor-pointer"
-            onClick={() => onSubmitMessage({ text: '✋' })}
+            onClick={() => onSubmitMessage({ text: "✋" })}
           >
             ✋
           </div>
