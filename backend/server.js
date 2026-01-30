@@ -7,7 +7,6 @@ const socketHandler = (io) => {
     return users.get(id?.toString());
   };
   io.on("connection", (socket) => {
-    console.log("🟢 Connected:", socket.id);
     socket.on("addOnlineUser", (user) => {
       const id = user?._id ?? user?.id ?? user;
       if (!id) return;
@@ -51,6 +50,12 @@ const socketHandler = (io) => {
         });
       }
     });
+    socket.on("typing", ({ receiver, sender, message }) => {
+      const receiverSocketId = getSocketId(receiver);
+      if (receiverSocketId) {
+        socket.to(receiverSocketId).emit("getTyping", { sender, message });
+      }
+    });
     socket.on("disconnect", () => {
       for (const [userId, socketId] of users.entries()) {
         if (socketId === socket.id) {
@@ -62,7 +67,6 @@ const socketHandler = (io) => {
         "getOnlineUsers",
         Array.from(users.keys()).map((u) => ({ user: { _id: u } })),
       );
-      console.log("🔴 Disconnected:", socket.id);
     });
   });
 };

@@ -145,7 +145,7 @@ const Settings = () => {
         </PopoverContent>
       </Popover>
       <Sheet open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <SheetContent side={"left"} className="w-80 p-2 max-md:w-full">
+        <SheetContent side={"left"} className="w-80 p-2 max-md:w-full overflow-auto">
           <SheetHeader>
             <SheetTitle className="text-2xl">My profile</SheetTitle>
             <SheetDescription>

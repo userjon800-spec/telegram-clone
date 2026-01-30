@@ -23,17 +23,17 @@ import {
 } from "@/components/ui/dialog";
 import { useSession } from "next-auth/react";
 import { messageSchema } from "@/lib/validation";
-import data from "@emoji-mart/data";
+import emojies from '@emoji-mart/data'
 import Picker from "@emoji-mart/react";
 import { useLoading } from "@/hooks/use.loading";
-import { UploadDropzone } from "@uploadthing/react";
+import { UploadDropzone } from "@/lib/uploadthing";
 import { IMessage } from "@/types";
 interface Props {
   onSubmitMessage: (values: z.infer<typeof messageSchema>) => Promise<void>;
   onReadMessages: () => Promise<void>;
   onReaction: (reaction: string, messageId: string) => Promise<void>;
   onDeleteMessage: (messageId: string) => Promise<void>;
-  onTyping?: (e: ChangeEvent<HTMLInputElement>) => void;
+  onTyping: (e: ChangeEvent<HTMLInputElement>) => void;
   messageForm: UseFormReturn<z.infer<typeof messageSchema>>;
   messages: IMessage[];
 }
@@ -52,12 +52,6 @@ const Chat: FC<Props> = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLFormElement | null>(null);
   const { editMessage, setEditedMessage, currentContact } = useCurrentContact();
-  console.debug(
-    "DEBUG Chat currentContact",
-    currentContact,
-    "messages",
-    messages.length,
-  );
   const { data: session } = useSession();
   const filteredMessages = messages.filter(
     (message, index, self) =>
@@ -122,14 +116,14 @@ const Chat: FC<Props> = ({
               <DialogHeader>
                 <DialogTitle />
               </DialogHeader>
-              {/* <UploadDropzone
+              <UploadDropzone
                 endpoint={"imageUploader"}
                 onClientUploadComplete={(res) => {
                   onSubmitMessage({ text: "", image: res[0].url });
                   setOpen(false);
                 }}
                 config={{ appendOnPaste: true, mode: "auto" }}
-              /> */}
+              />
             </DialogContent>
           </Dialog>
           <FormField
@@ -145,7 +139,7 @@ const Chat: FC<Props> = ({
                     onBlur={() => field.onBlur()}
                     onChange={(e) => {
                       field.onChange(e.target.value);
-                      // onTyping(e);
+                      onTyping(e);
                       if (e.target.value === "") setEditedMessage(null);
                     }}
                     ref={inputRef}
@@ -162,7 +156,7 @@ const Chat: FC<Props> = ({
             </PopoverTrigger>
             <PopoverContent className="p-0 border-none rounded-md absolute right-6 bottom-0">
               <Picker
-                // data={emojies}
+                data={emojies}
                 theme={resolvedTheme === "dark" ? "dark" : "light"}
                 onEmojiSelect={(emoji: { native: string }) =>
                   handleEmojiSelect(emoji.native)

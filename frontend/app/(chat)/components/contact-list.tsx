@@ -18,14 +18,22 @@ interface Props {
 const ContactList: FC<Props> = ({ contacts }) => {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  console.log(contacts, "contacts in contact list");
   const { onlineUsers } = useAuth();
   const { data: session } = useSession();
   const { currentContact, setCurrentContact } = useCurrentContact();
-  const filteredContacts = contacts.filter((contact) =>
-    contact.email.toLowerCase().includes(query.toLowerCase()),
-  );
-  console.log('online users', onlineUsers);
+  const filteredContacts = contacts
+    .filter((contact) =>
+      contact.email.toLowerCase().includes(query.toLowerCase()),
+    )
+    .sort((a, b) => {
+      const dataA = a.lastMessage
+        ? new Date(a.lastMessage.updatedAt).getTime()
+        : 0;
+      const dataB = b.lastMessage
+        ? new Date(b.lastMessage.updatedAt).getTime()
+        : 0;
+      return dataB - dataA;
+    });
   const renderContact = (contact: IUser) => {
     const onChat = () => {
       if (currentContact?._id === contact._id) return;

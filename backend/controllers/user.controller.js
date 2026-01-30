@@ -55,11 +55,12 @@ class UserController {
   // POST
   async createMessage(req, res, next) {
     try {
-      const { receiver, text } = req.body;
+      const { receiver, text, image } = req.body;
       const newMessage = await messageModel.create({
         sender: req.user._id,
         receiver,
         text,
+        image,
       });
       const currentMessage = await messageModel
         .findById(newMessage._id)

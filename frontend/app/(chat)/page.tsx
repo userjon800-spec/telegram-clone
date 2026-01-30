@@ -1,7 +1,7 @@
 "use client";
 import { Loader2 } from "lucide-react";
 import { ChangeEvent, FC, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
@@ -25,7 +25,8 @@ import { set } from "mongoose";
 const Page: FC = () => {
   const { data: session } = useSession();
   const { currentContact, editMessage, setEditedMessage } = useCurrentContact();
-  const { setLoading, isLoading, setCreating, setLoadMessages } = useLoading();
+  const { setLoading, isLoading, setCreating, setLoadMessages, setTyping } =
+    useLoading();
   const { setOnlineUsers, onlineUsers } = useAuth();
   const { playSound } = useAudio();
   const token = session?.accessToken;
@@ -38,17 +39,11 @@ const Page: FC = () => {
     defaultValues: { email: "" },
   });
   const messageForm = useForm<z.infer<typeof messageSchema>>({
-    resolver: zodResolver(messageSchema),
+    resolver: zodResolver(messageSchema) as unknown as Resolver<
+      z.infer<typeof messageSchema>
+    >,
     defaultValues: { text: "", image: "" },
   });
-  useEffect(() => {
-    console.debug(
-      "DEBUG session",
-      session?.user?._id,
-      "socket.connected",
-      socket.connected,
-    );
-  }, [session]);
   useEffect(() => {
     if (!session?.accessToken) return;
     if (!socket.connected) {
@@ -76,11 +71,10 @@ const Page: FC = () => {
       );
     };
     const onNewMessage = ({ newMessage, sender, receiver }: GetSocketType) => {
-      setMessages((prev) =>
-        prev.some((m) => m._id === newMessage._id)
-          ? prev
-          : [...prev, newMessage],
-      );
+      setTyping({ sender: null, message: "" });
+      if (CONTACT_ID === sender._id) {
+        setMessages((prev) => [...prev, newMessage]);
+      }
       setContacts((prev) => {
         return prev.map((contact) => {
           if (contact._id === sender._id) {
@@ -96,6 +90,9 @@ const Page: FC = () => {
           return contact;
         });
       });
+      if (!receiver.muted) {
+        playSound(receiver.notificationSound);
+      }
     };
     const readMessagesHandler = (messages: IMessage[]) => {
       setMessages((prev) =>
@@ -106,6 +103,7 @@ const Page: FC = () => {
       );
     };
     const updatedMessage = ({ updatedMessage, sender }: GetSocketType) => {
+      setTyping({ sender: null, message: "" });
       setMessages((prev) =>
         prev.map((item) =>
           item._id === updatedMessage._id
@@ -161,6 +159,11 @@ const Page: FC = () => {
     socket.on("getReadMessages", readMessagesHandler);
     socket.on("getUpdatedMessage", updatedMessage);
     socket.on("getDeletedMessage", getDeleteMessage);
+    socket.on("getTyping", ({ message, sender }: GetSocketType) => {
+      if (CONTACT_ID === sender._id) {
+        setTyping({ sender, message });
+      }
+    });
     return () => {
       socket.off("getCreateUser", onCreateUser);
       socket.off("getNewMessage", onNewMessage);
@@ -176,7 +179,6 @@ const Page: FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       setContacts(data.contacts);
-      console.debug("DEBUG contacts", data.contacts);
     } catch {
       toast.error("Cannot fetch contacts");
     } finally {
@@ -192,11 +194,6 @@ const Page: FC = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       setMessages(data.messages);
-      console.debug(
-        "DEBUG messages for",
-        currentContact._id,
-        data.messages.length,
-      );
       setContacts((prev) =>
         prev.map((item) =>
           item._id === currentContact._id && item.lastMessage
@@ -405,6 +402,13 @@ const Page: FC = () => {
       onSendMessage(values);
     }
   };
+  const onTyping = (e: ChangeEvent<HTMLInputElement>) => {
+    socket.emit("typing", {
+      sender: session?.user,
+      receiver: currentContact,
+      message: e.target.value,
+    });
+  };
   return (
     <>
       <div className="w-80 h-screen border-r fixed inset-0 z-50">
@@ -433,7 +437,7 @@ const Page: FC = () => {
               onReadMessages={onReadMessages}
               onReaction={onReaction}
               onDeleteMessage={onDeleteMessage}
-              // onTyping={onTyping}
+              onTyping={onTyping}
             />
           </>
         )}
