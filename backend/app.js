@@ -1,4 +1,4 @@
-require("dotenv").config(); // .env-dagi data-larni o'qish uchun
+require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const cookieParser = require("cookie-parser");
@@ -6,7 +6,7 @@ const { default: mongoose } = require("mongoose");
 const errorMiddleware = require("./middlewares/error.middleware.js");
 const cors = require("cors");
 const app = express();
-app.use(express.json()); // bu client kelgan json ma'lumotni obyektga o'zgartirib beradi har bir loyihda bo'lishi shart !
+app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
@@ -30,7 +30,6 @@ socketHandler(io);
 const bootstarp = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("Mongo Db Connected");
     server.listen(PORT, () =>
       console.log(`Server is run http://localhost:${PORT}`),
     );

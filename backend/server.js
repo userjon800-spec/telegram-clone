@@ -1,5 +1,3 @@
-const http = require("http");
-const app = require("./app");
 const socketHandler = (io) => {
   const users = new Map();
   const getSocketId = (user) => {

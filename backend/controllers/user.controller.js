@@ -4,7 +4,6 @@ const messageModel = require("../models/message.model");
 const userModel = require("../models/user.model");
 const mailService = require("../service/mail.service");
 class UserController {
-  // GET
   async getContacts(req, res, next) {
     try {
       const userId = req.user._id;
@@ -52,7 +51,6 @@ class UserController {
       next(error);
     }
   }
-  // POST
   async createMessage(req, res, next) {
     try {
       const { receiver, text, image } = req.body;
@@ -149,7 +147,6 @@ class UserController {
       next(error);
     }
   }
-  // [PUT]
   async updateProfile(req, res, next) {
     try {
       const updatedUser = await userModel.findByIdAndUpdate(
@@ -205,7 +202,6 @@ class UserController {
       next(error);
     }
   }
-  // [DELETE]
   async deleteUser(req, res, next) {
     try {
       await userModel.findByIdAndDelete(req.user._id);
