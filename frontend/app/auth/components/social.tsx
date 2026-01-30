@@ -5,7 +5,10 @@ import { useState } from "react";
 import { FaGithub, FaGoogle } from "react-icons/fa";
 const Social = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const onSignIn = async (provider: string) => {};
+  const onSignIn = async (provider: string) => {
+    setIsLoading(true);
+    await signIn(provider, { callbackUrl: "/" });
+  };
   return (
     <div className="grid grid-cols-2 w-full gap-1">
       <Button
@@ -27,5 +30,4 @@ const Social = () => {
     </div>
   );
 };
-
 export default Social;

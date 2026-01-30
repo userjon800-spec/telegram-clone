@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { useSession } from "next-auth/react";
 import { messageSchema } from "@/lib/validation";
-import emojies from '@emoji-mart/data'
+import emojies from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import { useLoading } from "@/hooks/use.loading";
 import { UploadDropzone } from "@/lib/uploadthing";
@@ -54,8 +54,11 @@ const Chat: FC<Props> = ({
   const { editMessage, setEditedMessage, currentContact } = useCurrentContact();
   const { data: session } = useSession();
   const filteredMessages = messages.filter(
-    (message, index, self) =>
-      index === self.findIndex((m) => m._id === message._id),
+    (message) =>
+      (message.sender._id === session?.user?._id &&
+        message.receiver._id === currentContact?._id) ||
+      (message.sender._id === currentContact?._id &&
+        message.receiver._id === session?.user?._id),
   );
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -82,19 +85,24 @@ const Chat: FC<Props> = ({
   return (
     <div className="flex flex-col justify-end z-40 min-h-[92vh] sidebar-custom-scrollbar overflow-y-scroll">
       {loadMessages && <ChatLoading />}
-      {filteredMessages.map((message) => (
+      {filteredMessages.map((message, index) => (
         <MessageCard
-          key={message._id}
+          key={index}
           message={message}
           onReaction={onReaction}
           onDeleteMessage={onDeleteMessage}
         />
-      ))}{" "}
+      ))}
       {messages.length === 0 && (
         <div className="w-full h-[88vh] flex items-center justify-center">
           <div
             className="text-[100px] cursor-pointer"
-            onClick={() => onSubmitMessage({ text: "✋" })}
+            onClick={() =>
+              onSubmitMessage({
+                text: "✋",
+                image: "",
+              })
+            }
           >
             ✋
           </div>

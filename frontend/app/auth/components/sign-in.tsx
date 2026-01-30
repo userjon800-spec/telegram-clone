@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { axiosClient } from "@/http/axios";
 import { emailSchema } from "@/lib/validation";
-import { IError } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";

@@ -9,14 +9,12 @@ import { useCurrentContact } from "@/hooks/use-current";
 import { useAuth } from "@/hooks/use-auth";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { CONST } from "@/lib/constants";
 import { format } from "date-fns";
 interface Props {
   contacts: IUser[];
 }
 const ContactList: FC<Props> = ({ contacts }) => {
-  const router = useRouter();
   const [query, setQuery] = useState("");
   const { onlineUsers } = useAuth();
   const { data: session } = useSession();
@@ -38,7 +36,6 @@ const ContactList: FC<Props> = ({ contacts }) => {
     const onChat = () => {
       if (currentContact?._id === contact._id) return;
       setCurrentContact(contact);
-      router.push(`/?chat=${contact._id}`);
     };
     return (
       <div

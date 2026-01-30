@@ -1,4 +1,4 @@
-'use client"'
+'use client"';
 import DangerZoneForm from "@/components/forms/danger-zone.form";
 import EmailForm from "@/components/forms/email.form";
 import InformationForm from "@/components/forms/information.form";
@@ -40,7 +40,6 @@ import {
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 interface IPayload {
@@ -51,7 +50,6 @@ const Settings = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const { data: session, update } = useSession();
-  const router = useRouter();
   const token = session?.accessToken;
   const { mutate, isPending } = useMutation({
     mutationFn: async (payload: IPayload) => {
@@ -63,12 +61,12 @@ const Settings = () => {
     onSuccess: (data) => {
       toast.success("Profile updated successfully");
       update({
-    ...session,
-    user: {
-      ...session?.user,
-      ...data.user,
-    },
-  });
+        ...session,
+        user: {
+          ...session?.user,
+          ...data.user,
+        },
+      });
     },
   });
   return (
@@ -81,7 +79,8 @@ const Settings = () => {
         </PopoverTrigger>
         <PopoverContent className="p-0 w-80">
           <h2 className="pt-2 pl-2 text-muted-foreground text-sm">
-            Settings: <span className="text-white">{session?.user?.email}</span>
+            Settings:{" "}
+            <span className="text-white">{session?.user?.email}</span>
           </h2>
           <Separator className="my-2" />
           <div className="flex flex-col">
@@ -96,7 +95,7 @@ const Settings = () => {
             </div>
             <div
               className="flex justify-between items-center p-2 hover:bg-secondary cursor-pointer"
-              onClick={() => router.push("/")}
+              onClick={() => window.location.reload()}
             >
               <div className="flex items-center gap-1">
                 <UserPlus size={16} />
@@ -110,7 +109,9 @@ const Settings = () => {
               </div>
               <Switch
                 checked={!session?.user?.muted}
-                onCheckedChange={() => mutate({ muted: !session?.user?.muted })}
+                onCheckedChange={() =>
+                  mutate({ muted: !session?.user?.muted })
+                }
                 disabled={isPending}
               />
             </div>
@@ -145,7 +146,7 @@ const Settings = () => {
         </PopoverContent>
       </Popover>
       <Sheet open={isProfileOpen} onOpenChange={setIsProfileOpen}>
-        <SheetContent side={"left"} className="w-80 p-2 max-md:w-full overflow-auto">
+        <SheetContent side={"left"} className="w-80 p-2 max-md:w-full">
           <SheetHeader>
             <SheetTitle className="text-2xl">My profile</SheetTitle>
             <SheetDescription>
@@ -168,7 +169,7 @@ const Settings = () => {
             <UploadButton
               endpoint="imageUploader"
               onClientUploadComplete={(res) => {
-                mutate({ avatar: res[0].url ?? res[0].ufsUrl });
+                mutate({ avatar: res[0].url });
               }}
               config={{ appendOnPaste: true, mode: "auto" }}
               className="absolute right-0 bottom-0"

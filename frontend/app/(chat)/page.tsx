@@ -5,7 +5,6 @@ import { useForm, Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import ContactList from "./components/contact-list";
 import AddContact from "./components/add-contact";
@@ -19,19 +18,15 @@ import { emailSchema, messageSchema } from "@/lib/validation";
 import { axiosClient } from "@/http/axios";
 import { socket } from "@/lib/socket";
 import { IUser, IMessage, IError } from "@/types";
-import { CONST, SOUNDS } from "@/lib/constants";
-import { on } from "events";
-import { set } from "mongoose";
+import { CONST } from "@/lib/constants";
 const Page: FC = () => {
   const { data: session } = useSession();
   const { currentContact, editMessage, setEditedMessage } = useCurrentContact();
   const { setLoading, isLoading, setCreating, setLoadMessages, setTyping } =
     useLoading();
-  const { setOnlineUsers, onlineUsers } = useAuth();
+  const { setOnlineUsers } = useAuth();
   const { playSound } = useAudio();
   const token = session?.accessToken;
-  const serachParams = useSearchParams();
-  const CONTACT_ID = serachParams.get("chat");
   const [contacts, setContacts] = useState<IUser[]>([]);
   const [messages, setMessages] = useState<IMessage[]>([]);
   const contactForm = useForm<z.infer<typeof emailSchema>>({
@@ -72,7 +67,7 @@ const Page: FC = () => {
     };
     const onNewMessage = ({ newMessage, sender, receiver }: GetSocketType) => {
       setTyping({ sender: null, message: "" });
-      if (CONTACT_ID === sender._id) {
+      if (currentContact?._id === newMessage.sender._id) {
         setMessages((prev) => [...prev, newMessage]);
       }
       setContacts((prev) => {
@@ -83,7 +78,9 @@ const Page: FC = () => {
               lastMessage: {
                 ...newMessage,
                 status:
-                  CONTACT_ID === sender._id ? CONST.READ : newMessage.status,
+                  currentContact?._id === sender._id
+                    ? CONST.READ
+                    : newMessage.status,
               },
             };
           }
@@ -160,7 +157,7 @@ const Page: FC = () => {
     socket.on("getUpdatedMessage", updatedMessage);
     socket.on("getDeletedMessage", getDeleteMessage);
     socket.on("getTyping", ({ message, sender }: GetSocketType) => {
-      if (CONTACT_ID === sender._id) {
+      if (currentContact?._id === sender._id) {
         setTyping({ sender, message });
       }
     });
